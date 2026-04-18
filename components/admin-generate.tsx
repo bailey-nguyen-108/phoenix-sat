@@ -1096,10 +1096,10 @@ function mockGenerate(
       const sampList = samples[b.label] || [
         'A newly drafted SAT-style question for ' + b.label + ' will appear here.',
       ];
-      const text = sampList[out.length % sampList.length];
-      const choices = choicesPool[out.length % choicesPool.length];
-      const correctKey = choices[Math.floor(Math.random() * 4)].k;
-      const correctText = choices.find((c) => c.k === correctKey)!.t;
+      const text: string = sampList[out.length % sampList.length];
+      const choices: Array<{ k: string; t: string }> = choicesPool[out.length % choicesPool.length];
+      const correctKey: string = choices[Math.floor(Math.random() * 4)].k;
+      const correctText: string = choices.find((c) => c.k === correctKey)!.t;
       out.push({
         id: 'AI-' + nextId++,
         topic: b.label,
