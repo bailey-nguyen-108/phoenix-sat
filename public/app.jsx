@@ -159,6 +159,12 @@ function App() {
         prototypeId={PROTOTYPE_ID}
         screenId={screenId}
         screenLabel={screenLabel}
+        onNavigateScreen={(nextScreenId) => {
+          const next = screenFromScreenId(nextScreenId);
+          if (!next) return;
+          setRole(next.role);
+          setScreen(next.screen);
+        }}
       />
 
       <div className={"tweaks " + (tweaks ? 'on' : '')}>
@@ -235,25 +241,50 @@ function screenIdFor(role, screen) {
   return (map[role] && map[role][screen]) || `${role}.${screen}`;
 }
 
+function screenFromScreenId(screenId) {
+  const map = {
+    'student.dashboard': { role: 'student', screen: 'dashboard' },
+    'student.session_setup': { role: 'student', screen: 'setup' },
+    'student.question': { role: 'student', screen: 'question' },
+    'student.results': { role: 'student', screen: 'results' },
+    'student.adaptive_booster': { role: 'student', screen: 'booster' },
+    'admin.question_bank': { role: 'admin', screen: 'bank' },
+    'admin.generate': { role: 'admin', screen: 'generate' },
+    'admin.ai_review': { role: 'admin', screen: 'review' },
+    'admin.students': { role: 'admin', screen: 'students' },
+    'admin.settings': { role: 'admin', screen: 'settings' }
+  };
+  return map[screenId] || null;
+}
+
 function installCommentStyles() {
   if (document.getElementById('prototype-comment-styles')) return;
   const style = document.createElement('style');
   style.id = 'prototype-comment-styles';
   style.textContent = `
-    .comment-toggle {
+    .comment-toolbar {
       position: fixed;
       right: 22px;
       bottom: 22px;
       z-index: 80;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
+      gap: 6px;
+      padding: 6px;
       border-radius: 999px;
       border: 1px solid var(--border);
       background: var(--surface);
-      color: var(--ink);
       box-shadow: var(--shadow-lg);
+    }
+    .comment-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--ink);
       font: 500 14px var(--sans);
       cursor: pointer;
     }
@@ -263,8 +294,10 @@ function installCommentStyles() {
       border-color: var(--accent);
     }
     .comment-overlay {
-      position: fixed;
+      position: absolute;
       inset: 0;
+      width: 100%;
+      min-height: 100%;
       z-index: 70;
       pointer-events: none;
     }
@@ -274,12 +307,12 @@ function installCommentStyles() {
     }
     .comment-overlay.active::before {
       content: "";
-      position: absolute;
+      position: fixed;
       inset: 0;
       background: rgba(255, 255, 255, 0.08);
     }
     .comment-pin {
-      position: fixed;
+      position: absolute;
       z-index: 76;
       width: 30px;
       height: 30px;
@@ -338,7 +371,7 @@ function installCommentStyles() {
       right: 22px;
       bottom: 74px;
       z-index: 75;
-      max-width: 280px;
+      max-width: 300px;
       padding: 10px 12px;
       border: 1px solid var(--accent-border);
       border-radius: 10px;
@@ -347,6 +380,90 @@ function installCommentStyles() {
       box-shadow: var(--shadow);
       font-size: 12px;
       pointer-events: none;
+    }
+    .comment-inbox {
+      position: fixed;
+      right: 22px;
+      bottom: 86px;
+      z-index: 82;
+      width: min(420px, calc(100vw - 32px));
+      max-height: min(680px, calc(100vh - 112px));
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+    }
+    .comment-inbox-head {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .comment-list {
+      overflow: auto;
+      padding: 10px;
+    }
+    .comment-inbox-foot {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .comment-list-empty {
+      padding: 28px 18px;
+      color: var(--ink-3);
+      text-align: center;
+      font-size: 13px;
+    }
+    .comment-list-item {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      text-align: left;
+      padding: 12px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: transparent;
+      cursor: pointer;
+    }
+    .comment-list-item:hover {
+      background: var(--surface-2);
+      border-color: var(--border);
+    }
+    .comment-list-item.active {
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+    }
+    .comment-list-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      color: var(--ink);
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .comment-list-text {
+      color: var(--ink-2);
+      font-size: 13px;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .comment-check {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .comment-check:disabled {
+      cursor: not-allowed;
+      opacity: 1;
     }
   `;
   document.head.appendChild(style);
@@ -381,11 +498,19 @@ function formatCommentDate(value) {
   }
 }
 
-function CommentLayer({ prototypeId, screenId, screenLabel }) {
-  const [active, setActive] = useStateApp(false);
+function commentStatusLabel(status) {
+  if (status === 'ai_task_draft') return 'sent to Saola';
+  if (status === 'resolved') return 'resolved';
+  return 'open';
+}
+
+function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) {
+  const [commentMode, setCommentMode] = useStateApp(false);
+  const [inboxOpen, setInboxOpen] = useStateApp(false);
   const [comments, setComments] = useStateApp([]);
   const [draft, setDraft] = useStateApp(null);
   const [selected, setSelected] = useStateApp(null);
+  const [selectedIds, setSelectedIds] = useStateApp([]);
   const [text, setText] = useStateApp('');
   const [createdBy, setCreatedBy] = useStateApp(() => localStorage.getItem('sat.commenter') || '');
   const [saving, setSaving] = useStateApp(false);
@@ -410,31 +535,72 @@ function CommentLayer({ prototypeId, screenId, screenLabel }) {
 
   useEffectApp(() => {
     setDraft(null);
-    setSelected(null);
+    setSelected((current) => current && current.screenId === screenId ? current : null);
     setText('');
   }, [screenId]);
+
+  useEffectApp(() => {
+    if (!selected || selected.screenId !== screenId) return;
+    const timer = setTimeout(() => {
+      const pinY = selected.yPercent * pageHeight();
+      const pinX = selected.xPercent * pageWidth();
+      window.scrollTo({
+        top: Math.max(0, pinY - window.innerHeight * 0.38),
+        left: Math.max(0, pinX - window.innerWidth * 0.5),
+        behavior: 'smooth'
+      });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [selected, screenId]);
 
   useEffectApp(() => {
     if (createdBy.trim()) localStorage.setItem('sat.commenter', createdBy.trim());
   }, [createdBy]);
 
+  useEffectApp(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        setCommentMode(false);
+        setDraft(null);
+        setSelected(null);
+        setInboxOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const visibleComments = comments.filter((comment) => comment.screenId === screenId);
+  const sortedComments = [...comments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const selectedComments = comments.filter((comment) => selectedIds.includes(comment.id));
+
+  function pageWidth() {
+    return Math.max(document.documentElement.scrollWidth, document.body.scrollWidth, window.innerWidth);
+  }
+
+  function pageHeight() {
+    return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight);
+  }
 
   function startDraft(event) {
-    if (!active) return;
-    if (event.target.closest('.comment-card, .comment-toggle, .comment-pin')) return;
-    const x = event.clientX;
-    const y = event.clientY;
+    if (!commentMode) return;
+    if (event.target.closest('.comment-card, .comment-toggle, .comment-pin, .comment-inbox')) return;
+    const viewportX = event.clientX;
+    const viewportY = event.clientY;
+    const x = viewportX + window.scrollX;
+    const y = viewportY + window.scrollY;
     setSelected(null);
     setText('');
     setDraft({
       x,
       y,
-      xPercent: x / Math.max(1, window.innerWidth),
-      yPercent: y / Math.max(1, window.innerHeight),
+      viewportX,
+      viewportY,
+      xPercent: x / Math.max(1, pageWidth()),
+      yPercent: y / Math.max(1, pageHeight()),
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
-      elementLabel: nearbyElementLabel(x, y)
+      elementLabel: nearbyElementLabel(viewportX, viewportY)
     });
   }
 
@@ -487,59 +653,163 @@ function CommentLayer({ prototypeId, screenId, screenLabel }) {
       .finally(() => setSaving(false));
   }
 
-  function updateStatus(comment, status) {
-    setSaving(true);
-    fetch('/api/comments', {
+  function patchStatus(comment, status) {
+    return fetch('/api/comments', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: comment.id, status })
     })
       .then((res) => res.ok ? res.json() : Promise.reject(new Error('Unable to update comment')))
-      .then((data) => {
-        setComments(comments.map((item) => item.id === comment.id ? data.comment : item));
-        setSelected(data.comment);
+      .then((data) => data.comment);
+  }
+
+  function updateStatus(comment, status) {
+    setSaving(true);
+    patchStatus(comment, status)
+      .then((updated) => {
+        setComments(comments.map((item) => item.id === comment.id ? updated : item));
+        setSelected(updated);
       })
       .catch((err) => setError(err.message || 'Unable to update comment'))
       .finally(() => setSaving(false));
   }
 
+  function sendSelectedToSaola() {
+    const targets = selectedComments.filter((comment) => comment.status !== 'ai_task_draft');
+    if (targets.length === 0) return;
+    setSaving(true);
+    Promise.all(targets.map((comment) => patchStatus(comment, 'ai_task_draft')))
+      .then((updatedComments) => {
+        const updatedById = Object.fromEntries(updatedComments.map((comment) => [comment.id, comment]));
+        setComments(comments.map((comment) => updatedById[comment.id] || comment));
+        setSelected((current) => current && updatedById[current.id] ? updatedById[current.id] : current);
+        setSelectedIds([]);
+      })
+      .catch((err) => setError(err.message || 'Unable to send selected comments'))
+      .finally(() => setSaving(false));
+  }
+
+  function openComment(comment) {
+    setDraft(null);
+    setSelected(comment);
+    setText('');
+    setInboxOpen(false);
+    if (comment.screenId !== screenId) onNavigateScreen(comment.screenId);
+  }
+
+  function toggleSelected(commentId) {
+    setSelectedIds((ids) => ids.includes(commentId)
+      ? ids.filter((id) => id !== commentId)
+      : [...ids, commentId]
+    );
+  }
+
   const activePoint = draft || selected;
   const position = activePoint ? cardPosition({
-    x: draft ? draft.x : selected.xPercent * window.innerWidth,
-    y: draft ? draft.y : selected.yPercent * window.innerHeight
+    x: draft ? draft.viewportX : selected.xPercent * pageWidth() - window.scrollX,
+    y: draft ? draft.viewportY : selected.yPercent * pageHeight() - window.scrollY
   }) : null;
 
   return (
     <>
-      <button
-        className={"comment-toggle " + (active ? 'on' : '')}
-        onClick={() => setActive(!active)}
-        title="Toggle prototype comments"
-      >
-        {active ? 'Comment mode on' : 'Comment'}
-        {visibleComments.length > 0 && <span className="tag" style={{ background: active ? 'rgba(255,255,255,.18)' : 'var(--surface-2)', color: active ? '#fff' : 'var(--ink-2)' }}>{visibleComments.length}</span>}
-      </button>
+      <div className="comment-toolbar">
+        <button
+          className={"comment-toggle " + (inboxOpen ? 'on' : '')}
+          onClick={() => setInboxOpen(!inboxOpen)}
+          title="Open prototype comments"
+        >
+          Comments
+          {comments.length > 0 && <span className="tag" style={{ background: inboxOpen ? 'rgba(255,255,255,.18)' : 'var(--surface-2)', color: inboxOpen ? '#fff' : 'var(--ink-2)' }}>{comments.length}</span>}
+        </button>
+        <button
+          className={"comment-toggle " + (commentMode ? 'on' : '')}
+          onClick={() => {
+            setCommentMode(!commentMode);
+            setInboxOpen(false);
+          }}
+          title="Toggle add pin mode"
+        >
+          {commentMode ? 'Adding pin' : 'Add pin'}
+        </button>
+      </div>
 
-      {active && !draft && !selected && (
-        <div className="comment-empty">
-          Click anywhere on this screen to leave a comment. Saved pins are shared for this prototype.
+      {inboxOpen && (
+        <div className="comment-inbox">
+          <div className="comment-inbox-head">
+            <div className="row between">
+              <div>
+                <div className="small muted">Prototype feedback</div>
+                <h3 style={{ fontSize: 18, marginTop: 3 }}>All comments</h3>
+              </div>
+              <button className="icon-btn" onClick={() => setInboxOpen(false)}>×</button>
+            </div>
+          </div>
+          <div className="comment-list">
+            {sortedComments.length === 0 && (
+              <div className="comment-list-empty">No comments yet. Turn on comment mode to place the first one.</div>
+            )}
+            {sortedComments.map((comment) => (
+              <button
+                key={comment.id}
+                className={"comment-list-item " + (selected && selected.id === comment.id ? 'active' : '')}
+                onClick={() => openComment(comment)}
+              >
+                <input
+                  className="comment-check"
+                  type="checkbox"
+                  checked={comment.status === 'ai_task_draft' || selectedIds.includes(comment.id)}
+                  disabled={comment.status === 'ai_task_draft'}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={() => toggleSelected(comment.id)}
+                  aria-label={`Select comment on ${comment.screenLabel}`}
+                />
+                <div>
+                  <div className="comment-list-title">
+                    <span>{comment.screenLabel}</span>
+                    <span className="tag" style={{ fontSize: 11 }}>{commentStatusLabel(comment.status)}</span>
+                  </div>
+                  <div className="comment-list-text">{comment.commentText}</div>
+                  <div className="comment-meta">
+                    <span>{comment.createdBy || 'Reviewer'}</span>
+                    <span>·</span>
+                    <span>{formatCommentDate(comment.createdAt)}</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="comment-inbox-foot">
+            {error && <div className="small" style={{ color: 'var(--bad)', marginBottom: 8 }}>{error}</div>}
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center' }}
+              disabled={saving || selectedComments.filter((comment) => comment.status !== 'ai_task_draft').length === 0}
+              onClick={sendSelectedToSaola}
+            >
+              Send To Saola
+            </button>
+          </div>
         </div>
       )}
 
-      <div className={"comment-overlay " + (active ? 'active' : '')} onClick={startDraft}>
+      {commentMode && !draft && !selected && !inboxOpen && (
+        <div className="comment-empty">
+          Add pin is on. Click anywhere on this screen to leave feedback.
+        </div>
+      )}
+
+      <div className={"comment-overlay " + (commentMode ? 'active' : '')} onClick={startDraft}>
         {visibleComments.map((comment, index) => (
           <button
             key={comment.id}
             className={"comment-pin " + comment.status}
             style={{
-              left: `${comment.xPercent * 100}%`,
-              top: `${comment.yPercent * 100}%`
+              left: `${comment.xPercent * pageWidth()}px`,
+              top: `${comment.yPercent * pageHeight()}px`
             }}
             onClick={(event) => {
               event.stopPropagation();
-              setDraft(null);
-              setSelected(comment);
-              setText('');
+              openComment(comment);
             }}
             title={comment.commentText}
           >
@@ -582,7 +852,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel }) {
               Comment
             </button>
             <button className="btn btn-primary" onClick={() => saveComment('ai_task_draft')} disabled={saving || !text.trim()}>
-              Send for implementation
+              Send To Saola
             </button>
           </div>
         </div>
@@ -592,7 +862,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel }) {
         <div className="comment-card" style={{ left: position.left, top: position.top }}>
           <div className="row between" style={{ marginBottom: 12 }}>
             <div>
-              <div className="small muted">{selected.status === 'ai_task_draft' ? 'Implementation draft' : selected.status === 'resolved' ? 'Resolved comment' : 'Comment'}</div>
+              <div className="small muted">{selected.status === 'ai_task_draft' ? 'Sent to Saola' : selected.status === 'resolved' ? 'Resolved comment' : 'Comment'}</div>
               <h3 style={{ fontSize: 18, marginTop: 3 }}>{selected.screenLabel}</h3>
             </div>
             <button className="icon-btn" onClick={closeCard}>×</button>
@@ -607,7 +877,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel }) {
             <span>{selected.createdBy || 'Reviewer'}</span>
             <span>·</span>
             <span>{formatCommentDate(selected.createdAt)}</span>
-            <span className="tag" style={{ fontSize: 11 }}>{selected.status.replace(/_/g, ' ')}</span>
+            <span className="tag" style={{ fontSize: 11 }}>{commentStatusLabel(selected.status)}</span>
           </div>
           {error && <div className="small" style={{ color: 'var(--bad)', marginTop: 10 }}>{error}</div>}
           <div className="row" style={{ gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
@@ -618,7 +888,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel }) {
             )}
             {selected.status !== 'ai_task_draft' && (
               <button className="btn btn-primary" disabled={saving} onClick={() => updateStatus(selected, 'ai_task_draft')}>
-                Send for implementation
+                Send To Saola
               </button>
             )}
           </div>
