@@ -1,22 +1,22 @@
-// Top-level shell: sidebar navigation, role switching, Tweaks panel.
+// Top-level shell: sidebar navigation, role switching, and prototype comments.
 const { useState: useStateApp, useEffect: useEffectApp } = React;
 
 const PROTOTYPE_ID = 'sat-prep-v1';
 
 const ACCENTS = {
-  'slate-blue': { accent: '#2F4F6F', ink: '#1E3350', soft: '#EEF2F6', border: '#D6DFE8', label: 'Slate blue' },
-  'ink': { accent: '#24262B', ink: '#14161A', soft: '#EFEEEB', border: '#DAD8D2', label: 'Ink' },
-  'deep-blue': { accent: '#1E3A8A', ink: '#172554', soft: '#EEF0F6', border: '#D3D9E8', label: 'Deep blue' },
-  'forest': { accent: '#2F5341', ink: '#1E3A2C', soft: '#EDF1EC', border: '#D4DED2', label: 'Forest' }
+  'teal': { accent: '#1D9896', ink: '#156E6D', soft: '#D9F3F2', border: '#AEE4E4', label: 'Teal' },
+  'orange': { accent: '#CC5800', ink: '#A04400', soft: '#FFF0E6', border: '#FFD4B0', label: 'Orange' },
+  'deep-teal': { accent: '#0F6B6A', ink: '#0A4A49', soft: '#D0EEEE', border: '#9ED8D7', label: 'Deep teal' },
+  'cyan-blue': { accent: '#1480B8', ink: '#0F5E88', soft: '#E6F5FD', border: '#B0D9F0', label: 'Cyan blue' }
 };
 
 function App() {
   const defaults = JSON.parse(document.getElementById('tweak-defaults').textContent);
+  const [authed, setAuthed] = useStateApp(() => localStorage.getItem('sat.authed') === '1');
   const [role, setRole] = useStateApp('student'); // student | admin
   const [screen, setScreen] = useStateApp(() => localStorage.getItem('sat.screen') || 'dashboard');
-  const [accent, setAccent] = useStateApp(defaults.accent);
-  const [density, setDensity] = useStateApp(defaults.density);
-  const [tweaks, setTweaks] = useStateApp(false);
+  const [accent] = useStateApp(defaults.accent || 'orange');
+  const [density] = useStateApp(defaults.density);
   const [lowScore, setLowScore] = useStateApp(() => localStorage.getItem('sat.lowScore') === '1');
   const [boosterDone, setBoosterDone] = useStateApp(false);
 
@@ -27,13 +27,13 @@ function App() {
   // gate: if a low-score booster is required and not yet finished, redirect away from forbidden screens
   const boosterRequired = lowScore && !boosterDone;
   useEffectApp(() => {
-    if(role !== 'student' || !boosterRequired) return;
-    if(['dashboard','setup','question'].includes(screen)) setScreen('results');
+    if (role !== 'student' || !boosterRequired) return;
+    if (['dashboard', 'setup', 'question'].includes(screen)) setScreen('results');
   }, [role, boosterRequired, screen]);
 
   // apply accent tokens
   useEffectApp(() => {
-    const a = ACCENTS[accent] || ACCENTS['slate-blue'];
+    const a = ACCENTS[accent] || ACCENTS.orange;
     const r = document.documentElement.style;
     r.setProperty('--accent', a.accent);
     r.setProperty('--accent-ink', a.ink);
@@ -45,16 +45,52 @@ function App() {
     document.body.style.fontSize = density === 'compact' ? '14px' : '15px';
   }, [density]);
 
-  // Tweaks protocol
+  // Expose global nav for PPTX export
   useEffectApp(() => {
-    const handler = (e) => {
-      if (e.data?.type === '__activate_edit_mode') setTweaks(true);
-      if (e.data?.type === '__deactivate_edit_mode') setTweaks(false);
-    };
-    window.addEventListener('message', handler);
-    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
-    return () => window.removeEventListener('message', handler);
-  }, []);
+    window.satNav = (role, screen) => { setRole(role); setScreen(screen); };
+    return () => { delete window.satNav; };
+  }, [setRole, setScreen]);
+
+  function handleAuth(r) {
+    setRole(r);
+    setScreen(r === 'admin' ? 'bank' : 'dashboard');
+    setAuthed(true);
+    localStorage.setItem('sat.authed', '1');
+  }
+
+  function navigateCommentScreen(nextScreenId) {
+    const next = screenFromScreenId(nextScreenId);
+    if (!next) return;
+    if (next.role === 'auth') {
+      setAuthed(false);
+      localStorage.removeItem('sat.authed');
+      return;
+    }
+    setAuthed(true);
+    localStorage.setItem('sat.authed', '1');
+    setRole(next.role);
+    setScreen(next.screen);
+  }
+
+  // pick default screen when switching roles
+  useEffectApp(() => {
+    if (role === 'student' && !['dashboard', 'setup', 'question', 'results', 'booster'].includes(screen)) setScreen('dashboard');
+    if (role === 'admin' && !['bank', 'generate', 'review', 'students', 'settings'].includes(screen)) setScreen('bank');
+  }, [role, screen]);
+
+  if (!authed) {
+    return (
+      <>
+        <AuthGate onAuth={handleAuth} />
+        <CommentLayer
+          prototypeId={PROTOTYPE_ID}
+          screenId="auth.sign_in"
+          screenLabel="Sign in"
+          onNavigateScreen={navigateCommentScreen}
+        />
+      </>
+    );
+  }
 
   const studentItems = [
   { id: 'dashboard', label: 'Dashboard', icon: <IHome />, locked: boosterRequired },
@@ -71,12 +107,6 @@ function App() {
   { id: 'settings', label: 'Settings', icon: <ISettings /> }];
 
 
-  // pick default screen when switching roles
-  useEffectApp(() => {
-    if (role === 'student' && !['dashboard', 'setup', 'question', 'results', 'booster'].includes(screen)) setScreen('dashboard');
-    if (role === 'admin' && !['bank', 'generate', 'review', 'students', 'settings'].includes(screen)) setScreen('bank');
-  }, [role]);
-
   const items = role === 'student' ? studentItems : adminItems;
   const screenId = screenIdFor(role, screen);
   const screenLabel = labelFor(role, screen);
@@ -85,35 +115,47 @@ function App() {
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">S</div>
           <div>
-            <div className="brand-name">SAT Prep</div>
-            <div className="brand-sub">{role === 'student' ? 'Student' : 'Admin'} workspace</div>
+            <img
+              src="/phoenix-prep-logo.png"
+              alt="Phoenix Prep"
+              style={{ display: 'block', width: 176, maxWidth: '100%', height: 'auto' }}
+            />
           </div>
         </div>
 
-        <div className="seg" style={{ marginBottom: 12, alignSelf: 'stretch', display: 'flex' }}>
+        <div className="seg" style={{ marginBottom: 16, alignSelf: 'stretch', display: 'flex' }}>
           <button className={role === 'student' ? 'on' : ''} onClick={() => setRole('student')} style={{ flex: 1 }}>Student</button>
           <button className={role === 'admin' ? 'on' : ''} onClick={() => setRole('admin')} style={{ flex: 1 }}>Admin</button>
         </div>
 
-        {role === 'student' && (
-          <div className="seg" style={{ marginBottom: 16, alignSelf: 'stretch', display: 'flex' }}>
-            <button className={!lowScore ? 'on' : ''} onClick={() => { setLowScore(false); setBoosterDone(false); }} style={{ flex: 1, fontSize: 13 }}>Above 70%</button>
-            <button className={lowScore ? 'on' : ''} onClick={() => { setLowScore(true); setBoosterDone(false); setScreen('results'); }} style={{ flex: 1, fontSize: 13 }}>Below 70%</button>
-          </div>
-        )}
+        <div className="seg" style={{ marginBottom: 16, alignSelf: 'stretch', display: 'flex' }}>
+          <button
+            className={!lowScore ? 'on' : ''}
+            onClick={() => { setLowScore(false); setBoosterDone(false); }}
+            style={{ flex: 1 }}
+          >
+            Above 70%
+          </button>
+          <button
+            className={lowScore ? 'on' : ''}
+            onClick={() => { setLowScore(true); setBoosterDone(false); setRole('student'); setScreen('results'); }}
+            style={{ flex: 1 }}
+          >
+            Below 70%
+          </button>
+        </div>
 
-        <div className="side-label" style={{ marginTop: role === 'admin' ? 4 : 0 }}>{role === 'student' ? 'Practice' : 'Content'}</div>
+        <div className="side-label">{role === 'student' ? 'Practice' : 'Content'}</div>
         {items.map((i) =>
         <button key={i.id}
         className={"side-item " + (screen === i.id ? 'active' : '')}
         disabled={i.locked}
-        style={i.locked ? {opacity:.45, cursor:'not-allowed'} : (i.accent ? {background:'var(--accent-soft)', color:'var(--accent-ink)', fontWeight:500} : null)}
+        style={i.locked ? { opacity: .45, cursor: 'not-allowed' } : i.accent ? { background: 'var(--accent-soft)', color: 'var(--accent-ink)', fontWeight: 500 } : null}
         onClick={() => !i.locked && setScreen(i.id)}>
             {i.icon}
             <span>{i.label}</span>
-            {i.locked && <span style={{marginLeft:'auto', color:'var(--ink-4)'}}><ILock size={13}/></span>}
+            {i.locked && <span style={{ marginLeft: 'auto', color: 'var(--ink-4)' }}><ILock size={13} /></span>}
             {i.badge && <span className="tag tag-strong" style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 7px' }}>{i.badge}</span>}
           </button>
         )}
@@ -121,34 +163,40 @@ function App() {
         <div className="side-foot">
           <div className="side-user">
             <div className="avatar">LN</div>
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 500, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                 {role === 'student' ? 'Linh Nguyễn' : 'Bảo Phạm'}
               </div>
-              <div className="small muted">{role === 'student' ? 'Class of ’26' : 'Admin · Curriculum'}</div>
+              <div className="small muted">{role === 'student' ? 'Class of \u201926' : 'Admin \u00b7 Curriculum'}</div>
             </div>
+            <button title="Sign out" onClick={() => { setAuthed(false); localStorage.removeItem('sat.authed'); }}
+              style={{ background:'none', border:'none', cursor:'pointer', color:'var(--ink-4)', padding:4, borderRadius:6, display:'grid', placeItems:'center' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
           </div>
         </div>
       </aside>
 
       <main className="main">
-        <div className="topbar">
-          <div className="crumbs">
+        <div className="topbar" style={{ fontFamily: "Karla" }}>
+          <div className="crumbs" style={{ fontFamily: "\"DM Sans\"" }}>
             {role === 'student' ? 'Practice' : 'Content'}
             <IChevR size={13} />
             <strong>{screenLabel}</strong>
           </div>
-          <div className="top-actions">
-            <button className="icon-btn"><ISearch /></button>
-            <button className="icon-btn"><IBell /></button>
-          </div>
+        <div className="top-actions">
+          <button className="icon-btn"><ISearch /></button>
+          <button className="icon-btn"><IBell /></button>
+        </div>
         </div>
 
         {role === 'student' && screen === 'dashboard' && <StudentDashboard go={setScreen} />}
         {role === 'student' && screen === 'setup' && <SessionSetup go={setScreen} />}
         {role === 'student' && screen === 'question' && <QuestionScreen go={setScreen} />}
         {role === 'student' && screen === 'results' && <ResultsScreen go={setScreen} lowScore={lowScore} startBooster={() => setScreen('booster')} />}
-        {role === 'student' && screen === 'booster' && <AdaptiveBooster go={setScreen} finish={() => { setBoosterDone(true); setLowScore(false); }} />}
+        {role === 'student' && screen === 'booster' && <AdaptiveBooster go={setScreen} finish={() => {setBoosterDone(true);setLowScore(false);}} />}
         {role === 'admin' && screen === 'bank' && <AdminBank go={setScreen} />}
         {role === 'admin' && screen === 'generate' && <AdminGenerate go={setScreen} />}
         {role === 'admin' && screen === 'review' && <AdminReview go={setScreen} />}
@@ -159,57 +207,9 @@ function App() {
         prototypeId={PROTOTYPE_ID}
         screenId={screenId}
         screenLabel={screenLabel}
-        onNavigateScreen={(nextScreenId) => {
-          const next = screenFromScreenId(nextScreenId);
-          if (!next) return;
-          setRole(next.role);
-          setScreen(next.screen);
-        }}
+        onNavigateScreen={navigateCommentScreen}
       />
 
-      <div className={"tweaks " + (tweaks ? 'on' : '')}>
-        <h4>Tweaks</h4>
-        <div className="tweak-row">
-          <label>Accent color</label>
-          <div className="swatches">
-            {Object.entries(ACCENTS).map(([k, v]) =>
-            <div key={k}
-            className={"sw " + (accent === k ? 'active' : '')}
-            title={v.label}
-            style={{ background: v.accent }}
-            onClick={() => {
-              setAccent(k);
-              window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { accent: k } }, '*');
-            }} />
-            )}
-          </div>
-        </div>
-        <div className="tweak-row">
-          <label>Density</label>
-          <div className="seg">
-            {['compact', 'comfortable'].map((d) =>
-            <button key={d} className={density === d ? 'on' : ''} onClick={() => {
-              setDensity(d);
-              window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { density: d } }, '*');
-            }}>{d}</button>
-            )}
-          </div>
-        </div>
-        <div className="tweak-row">
-          <label>Score variant</label>
-          <div className="seg">
-            <button className={!lowScore ? 'on' : ''} onClick={() => { setLowScore(false); setBoosterDone(false); }}>Above 70%</button>
-            <button className={lowScore ? 'on' : ''} onClick={() => { setLowScore(true); setBoosterDone(false); setScreen('results'); }}>Below 70%</button>
-          </div>
-        </div>
-        <div className="tweak-row">
-          <label>Role</label>
-          <div className="seg">
-            <button className={role === 'student' ? 'on' : ''} onClick={() => setRole('student')}>Student</button>
-            <button className={role === 'admin' ? 'on' : ''} onClick={() => setRole('admin')}>Admin</button>
-          </div>
-        </div>
-      </div>
     </div>);
 
 }
@@ -248,6 +248,7 @@ function screenFromScreenId(screenId) {
     'student.question': { role: 'student', screen: 'question' },
     'student.results': { role: 'student', screen: 'results' },
     'student.adaptive_booster': { role: 'student', screen: 'booster' },
+    'auth.sign_in': { role: 'auth', screen: 'sign_in' },
     'admin.question_bank': { role: 'admin', screen: 'bank' },
     'admin.generate': { role: 'admin', screen: 'generate' },
     'admin.ai_review': { role: 'admin', screen: 'review' },
@@ -369,17 +370,50 @@ function installCommentStyles() {
     .comment-empty {
       position: fixed;
       right: 22px;
-      bottom: 74px;
+      bottom: 96px;
       z-index: 75;
-      max-width: 300px;
-      padding: 10px 12px;
+      width: min(420px, calc(100vw - 44px));
+      padding: 12px 44px 12px 14px;
       border: 1px solid var(--accent-border);
       border-radius: 10px;
       background: var(--accent-soft);
       color: var(--accent-ink);
       box-shadow: var(--shadow);
       font-size: 12px;
-      pointer-events: none;
+      pointer-events: auto;
+    }
+    .comment-empty-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      font: 600 18px/1 var(--sans);
+    }
+    .comment-empty-close:hover {
+      background: rgba(255, 255, 255, .55);
+    }
+    .comment-close {
+      width: 28px;
+      height: 28px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--ink-3);
+      cursor: pointer;
+      display: inline-grid;
+      place-items: center;
+      flex: none;
+      font: 600 18px/1 var(--sans);
+    }
+    .comment-close:hover {
+      background: var(--surface-2);
+      color: var(--ink);
     }
     .comment-inbox {
       position: fixed;
@@ -472,6 +506,9 @@ function installCommentStyles() {
 function nearbyElementLabel(x, y) {
   const ignored = ['comment-overlay', 'comment-toggle', 'comment-card', 'comment-pin', 'comment-scrim'];
   const elements = document.elementsFromPoint(x, y);
+  const modal = elements
+    .map((el) => el && el.closest ? el.closest('[data-comment-modal]') : null)
+    .find(Boolean);
   const found = elements.find((el) => {
     if (!el || !el.classList) return false;
     if (ignored.some((className) => el.classList.contains(className))) return false;
@@ -482,7 +519,10 @@ function nearbyElementLabel(x, y) {
 
   if (!found) return '';
   const label = found.getAttribute('aria-label') || found.getAttribute('title') || found.innerText || found.textContent || '';
-  return label.trim().replace(/\s+/g, ' ').slice(0, 140);
+  const context = modal
+    ? `[context:${modal.dataset.commentModal || ''}:${modal.dataset.commentTarget || ''}] `
+    : '';
+  return (context + label.trim().replace(/\s+/g, ' ')).slice(0, 180);
 }
 
 function formatCommentDate(value) {
@@ -515,6 +555,8 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
   const [createdBy, setCreatedBy] = useStateApp(() => localStorage.getItem('sat.commenter') || '');
   const [saving, setSaving] = useStateApp(false);
   const [error, setError] = useStateApp('');
+  const [noticeHidden, setNoticeHidden] = useStateApp(false);
+  const [anchorTick, setAnchorTick] = useStateApp(0);
 
   useEffectApp(() => {
     installCommentStyles();
@@ -570,7 +612,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const visibleComments = comments.filter((comment) => comment.screenId === screenId);
+  const visibleComments = comments.filter((comment) => comment.screenId === screenId && comment.status !== 'resolved');
   const sortedComments = [...comments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const selectedComments = comments.filter((comment) => selectedIds.includes(comment.id));
 
@@ -695,6 +737,18 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
     setText('');
     setInboxOpen(false);
     if (comment.screenId !== screenId) onNavigateScreen(comment.screenId);
+    requestCommentContext(comment);
+  }
+
+  function requestCommentContext(comment) {
+    [80, 260, 520].forEach((delay) => {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('sat:open-comment-context', { detail: comment }));
+      }, delay);
+    });
+    [120, 340, 680].forEach((delay) => {
+      setTimeout(() => setAnchorTick((tick) => tick + 1), delay);
+    });
   }
 
   function toggleSelected(commentId) {
@@ -704,10 +758,30 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
     );
   }
 
+  function isHandledComment(comment) {
+    return comment.status === 'ai_task_draft' || comment.status === 'resolved';
+  }
+
+  function selectedViewportPoint(comment) {
+    const pin = document.querySelector(`[data-comment-id="${comment.id}"]`);
+    if (pin) {
+      const rect = pin.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+    }
+    return {
+      x: comment.xPercent * pageWidth() - window.scrollX,
+      y: comment.yPercent * pageHeight() - window.scrollY
+    };
+  }
+
   const activePoint = draft || selected;
+  void anchorTick;
   const position = activePoint ? cardPosition({
-    x: draft ? draft.viewportX : selected.xPercent * pageWidth() - window.scrollX,
-    y: draft ? draft.viewportY : selected.yPercent * pageHeight() - window.scrollY
+    x: draft ? draft.viewportX : selectedViewportPoint(selected).x,
+    y: draft ? draft.viewportY : selectedViewportPoint(selected).y
   }) : null;
 
   return (
@@ -724,7 +798,9 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
         <button
           className={"comment-toggle " + (commentMode ? 'on' : '')}
           onClick={() => {
-            setCommentMode(!commentMode);
+            const nextMode = !commentMode;
+            setCommentMode(nextMode);
+            if (nextMode) setNoticeHidden(false);
             setInboxOpen(false);
           }}
           title="Toggle add pin mode"
@@ -741,7 +817,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
                 <div className="small muted">Prototype feedback</div>
                 <h3 style={{ fontSize: 18, marginTop: 3 }}>All comments</h3>
               </div>
-              <button className="icon-btn" onClick={() => setInboxOpen(false)}>×</button>
+              <button className="comment-close" onClick={() => setInboxOpen(false)} aria-label="Close comments">×</button>
             </div>
           </div>
           <div className="comment-list">
@@ -757,8 +833,8 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
                 <input
                   className="comment-check"
                   type="checkbox"
-                  checked={comment.status === 'ai_task_draft' || selectedIds.includes(comment.id)}
-                  disabled={comment.status === 'ai_task_draft'}
+                  checked={isHandledComment(comment) || selectedIds.includes(comment.id)}
+                  disabled={isHandledComment(comment)}
                   onClick={(event) => event.stopPropagation()}
                   onChange={() => toggleSelected(comment.id)}
                   aria-label={`Select comment on ${comment.screenLabel}`}
@@ -792,9 +868,18 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
         </div>
       )}
 
-      {commentMode && !draft && !selected && !inboxOpen && (
+      {commentMode && !draft && !selected && !inboxOpen && !noticeHidden && (
         <div className="comment-empty">
           Add pin is on. Click anywhere on this screen to leave feedback.
+          <button
+            className="comment-empty-close"
+            type="button"
+            onClick={() => setNoticeHidden(true)}
+            aria-label="Close notice"
+            title="Close notice"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -802,6 +887,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
         {visibleComments.map((comment, index) => (
           <button
             key={comment.id}
+            data-comment-id={comment.id}
             className={"comment-pin " + comment.status}
             style={{
               left: `${comment.xPercent * pageWidth()}px`,
@@ -827,7 +913,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
               <div className="small muted">New comment</div>
               <h3 style={{ fontSize: 18, marginTop: 3 }}>{screenLabel}</h3>
             </div>
-            <button className="icon-btn" onClick={closeCard}>×</button>
+            <button className="comment-close" onClick={closeCard} aria-label="Close comment">×</button>
           </div>
           {draft.elementLabel && (
             <div className="small muted" style={{ marginBottom: 10 }}>
@@ -865,7 +951,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
               <div className="small muted">{selected.status === 'ai_task_draft' ? 'Sent to Saola' : selected.status === 'resolved' ? 'Resolved comment' : 'Comment'}</div>
               <h3 style={{ fontSize: 18, marginTop: 3 }}>{selected.screenLabel}</h3>
             </div>
-            <button className="icon-btn" onClick={closeCard}>×</button>
+            <button className="comment-close" onClick={closeCard} aria-label="Close comment">×</button>
           </div>
           <p style={{ fontSize: 15, lineHeight: 1.6, marginBottom: 12 }}>{selected.commentText}</p>
           {selected.elementLabel && (
@@ -886,7 +972,7 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
             ) : (
               <button className="btn btn-ghost" disabled={saving} onClick={() => updateStatus(selected, 'resolved')}>Resolve</button>
             )}
-            {selected.status !== 'ai_task_draft' && (
+            {selected.status !== 'ai_task_draft' && selected.status !== 'resolved' && (
               <button className="btn btn-primary" disabled={saving} onClick={() => updateStatus(selected, 'ai_task_draft')}>
                 Send To Saola
               </button>

@@ -9,27 +9,39 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --accent: #2F4F6F;        /* deep slate-blue */
-    --accent-ink: #1E3350;    /* darker hover */
-    --accent-soft: #EEF2F6;   /* tinted surface */
-    --accent-border: #D6DFE8;
+    /* ── Brand teal ─────────────────────────────── */
+    --accent: #1D9896;        /* interactive teal — 4.5:1 on white */
+    --accent-ink: #156E6D;    /* hover / pressed */
+    --accent-brand: #57C5C3;  /* decorative highlight teal */
+    --accent-soft: #D9F3F2;   /* very light mint surface */
+    --accent-border: #AEE4E4; /* pale aqua border */
 
-    --bg: #F7F6F3;            /* warm off-white */
+    /* ── Brand orange ───────────────────────────── */
+    --orange: #FF7E2E;
+    --orange-ink: #CC5800;
+    --orange-soft: #FFF0E6;
+    --orange-border: #FFD4B0;
+
+    /* ── Background / Surface ───────────────────── */
+    --bg: #F0FAFA;            /* pale aqua-tinted background */
     --surface: #FFFFFF;
-    --surface-2: #FBFAF7;
-    --ink: #1A1A1A;
-    --ink-2: #404040;
-    --ink-3: #6B6B6B;
-    --ink-4: #9A9A95;
-    --border: #E8E6E0;
-    --border-2: #EFEDE7;
+    --surface-2: #F6FFFF;     /* off-white with teal hint */
+    --ink: #0D1E1E;           /* near-black, teal-tinted */
+    --ink-2: #2A3E3E;
+    --ink-3: #5A7272;
+    --ink-4: #8AACAC;
+    --border: #C8E4E4;
+    --border-2: #DCF0F0;
 
+    /* ── Semantic ────────────────────────────────── */
     --ok: #3F7A5E;
     --ok-soft: #E8F0EA;
-    --warn: #A0691C;
-    --warn-soft: #F5EEDE;
-    --bad: #A5443A;
-    --bad-soft: #F3E5E1;
+    --warn: #B85C00;          /* text-safe from #FF7E2E */
+    --warn-soft: #FFF0E6;
+    --bad: #B5181D;           /* text-safe from #E11E24 */
+    --bad-soft: #FDEAEA;
+    --info: #1480B8;          /* text-safe from #2DB8F3 */
+    --info-soft: #E6F5FD;
 
     --radius-sm: 6px;
     --radius: 10px;
@@ -81,14 +93,6 @@
     display:flex; align-items:center; gap:10px;
     padding: 6px 10px 18px 10px;
   }
-  .brand-mark{
-    width:28px; height:28px; border-radius:7px;
-    background: var(--accent);
-    color: #fff; display:grid; place-items:center;
-    font-family: var(--serif); font-weight:600; font-size:15px;
-    letter-spacing:-0.02em;
-  }
-  .brand-name{font-family:var(--serif); font-size:17px; font-weight:500; letter-spacing:-0.01em}
   .brand-sub{font-size:11px; color:var(--ink-4); margin-top:1px; letter-spacing:0.02em}
 
   .side-label{
@@ -405,7 +409,7 @@
 
 <script type="application/json" id="tweak-defaults">
 {
-  "accent": "slate-blue",
+  "accent": "orange",
   "density": "comfortable",
   "studentName": "Linh Nguyễn"
 }
@@ -417,8 +421,11 @@
 
 <script type="text/babel" src="icons.jsx"></script>
 <script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="auth.jsx"></script>
 <script type="text/babel" src="student.jsx"></script>
+<script type="text/babel" src="booster.jsx"></script>
 <script type="text/babel" src="admin.jsx"></script>
+<script type="text/babel" src="generate.jsx"></script>
 <script type="text/babel" src="app.jsx"></script>
 
 </body>

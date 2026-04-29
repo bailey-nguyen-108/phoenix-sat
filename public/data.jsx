@@ -9,24 +9,24 @@ const DASHBOARD = {
   scoreDelta: 40,
   weakTopics: [
     { tag: "Linear equations", accuracy: 0.42, subject: "Math" },
-    { tag: "Data inferences",  accuracy: 0.48, subject: "R&W" },
+    { tag: "Data inferences",  accuracy: 0.48, subject: "Reading" },
     { tag: "Circle theorems",  accuracy: 0.55, subject: "Math" },
-    { tag: "Transitions",      accuracy: 0.58, subject: "R&W" },
+    { tag: "Transitions",      accuracy: 0.58, subject: "Reading" },
     { tag: "Ratios & rates",   accuracy: 0.61, subject: "Math" },
   ],
   recent: [
     { date: "Wed",  subject: "Math", correct: 14, total: 18 },
-    { date: "Tue",  subject: "R&W",  correct: 11, total: 15 },
+    { date: "Tue",  subject: "Reading",  correct: 11, total: 15 },
     { date: "Sun",  subject: "Math", correct: 16, total: 20 },
-    { date: "Sat",  subject: "R&W",  correct: 9,  total: 12 },
+    { date: "Sat",  subject: "Reading",  correct: 9,  total: 12 },
   ],
 };
 
-// A Bluebook-esque Reading & Writing question
+// A Bluebook-esque Reading question
 const QUESTION = {
   index: 7,
   total: 15,
-  subject: "Reading & Writing",
+  subject: "Reading",
   topic: "Transitions",
   passage: (
     <>
@@ -54,7 +54,7 @@ const RESULT = {
   total: 15,
   accuracy: 0.733,
   duration: "22:14",
-  subject: "Reading & Writing · Medium",
+  subject: "Reading · Medium",
   rows: [
     { n:1,  topic:"Central idea",       ok:true  },
     { n:2,  topic:"Word in context",    ok:true  },
@@ -84,23 +84,23 @@ const RESULT = {
 
 // Question bank table
 const BANK = [
-  { id:"Q-1084", subject:"Math", difficulty:"Hard",   topic:"Quadratics",        status:"live",    updated:"2d ago",  author:"Minh Trần" },
-  { id:"Q-1083", subject:"R&W",  difficulty:"Medium", topic:"Transitions",       status:"pending", updated:"2d ago",  author:"AI · Claude" },
-  { id:"Q-1082", subject:"Math", difficulty:"Easy",   topic:"Linear equations",  status:"live",    updated:"3d ago",  author:"Hoa Lê" },
-  { id:"Q-1081", subject:"R&W",  difficulty:"Hard",   topic:"Command of evidence", status:"live",  updated:"3d ago",  author:"Minh Trần" },
-  { id:"Q-1080", subject:"Math", difficulty:"Medium", topic:"Circle theorems",   status:"pending", updated:"4d ago",  author:"AI · Claude" },
-  { id:"Q-1079", subject:"R&W",  difficulty:"Easy",   topic:"Word in context",   status:"live",    updated:"5d ago",  author:"Hoa Lê" },
-  { id:"Q-1078", subject:"Math", difficulty:"Medium", topic:"Ratios & rates",    status:"live",    updated:"5d ago",  author:"Minh Trần" },
-  { id:"Q-1077", subject:"R&W",  difficulty:"Medium", topic:"Text structure",    status:"pending", updated:"6d ago",  author:"AI · Claude" },
-  { id:"Q-1076", subject:"Math", difficulty:"Hard",   topic:"Exponentials",      status:"live",    updated:"1w ago",  author:"Minh Trần" },
-  { id:"Q-1075", subject:"R&W",  difficulty:"Easy",   topic:"Central idea",      status:"live",    updated:"1w ago",  author:"Hoa Lê" },
+  { id:"Q-1084", subject:"Math", difficulty:"Hard",   topic:"Quadratics",            status:"live",    updated:"2d ago",  author:"Minh Trần",    text:"If x² − 5x − 14 = 0, what is the positive value of x?", choices:[{k:"A",t:"2"},{k:"B",t:"7"},{k:"C",t:"−2"},{k:"D",t:"5"}], correctKey:"B" },
+  { id:"Q-1083", subject:"Reading",  difficulty:"Medium", topic:"Transitions",       status:"pending", updated:"2d ago",  author:"AI-generated", text:"Coffee farmers in the Central Highlands have shifted toward shade-grown plots. ______ yields per hectare have dropped only modestly.", choices:[{k:"A",t:"However,"},{k:"B",t:"As a result,"},{k:"C",t:"For example,"},{k:"D",t:"Therefore,"}], correctKey:"A" },
+  { id:"Q-1082", subject:"Math", difficulty:"Easy",   topic:"Linear equations",      status:"live",    updated:"3d ago",  author:"Hoa Lê",       text:"If 2(x + 4) − 3x = x − 6, what is the value of x?", choices:[{k:"A",t:"7"},{k:"B",t:"−7"},{k:"C",t:"3"},{k:"D",t:"−3"}], correctKey:"A" },
+  { id:"Q-1081", subject:"Reading",  difficulty:"Hard",   topic:"Command of evidence", status:"live",  updated:"3d ago",  author:"Minh Trần",    text:"Which quotation from the passage most directly supports the claim that the policy was ineffective?", choices:[{k:"A",t:"'The committee approved the measure unanimously.'"},{k:"B",t:"'Emission levels rose 12% in the year following implementation.'"},{k:"C",t:"'Officials praised the transparency of the process.'"},{k:"D",t:"'Public support reached an all-time high.'" }], correctKey:"B" },
+  { id:"Q-1080", subject:"Math", difficulty:"Medium", topic:"Circle theorems",       status:"pending", updated:"4d ago",  author:"AI-generated", text:"A circle has center O and radius 5. If arc AB subtends a central angle of 72°, what is the length of arc AB?", choices:[{k:"A",t:"2π"},{k:"B",t:"5π/2"},{k:"C",t:"π"},{k:"D",t:"10π"}], correctKey:"A" },
+  { id:"Q-1079", subject:"Reading",  difficulty:"Easy",   topic:"Word in context",   status:"live",    updated:"5d ago",  author:"Hoa Lê",       text:"As used in paragraph 3, the word \"deliberate\" most nearly means", choices:[{k:"A",t:"slow"},{k:"B",t:"intentional"},{k:"C",t:"cautious"},{k:"D",t:"forceful"}], correctKey:"B" },
+  { id:"Q-1078", subject:"Math", difficulty:"Medium", topic:"Ratios & rates",        status:"live",    updated:"5d ago",  author:"Minh Trần",    text:"A car travels 180 km in 2.5 hours. At the same speed, how many kilometers will it travel in 4 hours?", choices:[{k:"A",t:"270"},{k:"B",t:"288"},{k:"C",t:"300"},{k:"D",t:"320"}], correctKey:"B" },
+  { id:"Q-1077", subject:"Reading",  difficulty:"Medium", topic:"Text structure",    status:"pending", updated:"6d ago",  author:"AI-generated", text:"The author structures the passage primarily by", choices:[{k:"A",t:"presenting a problem and proposing a solution"},{k:"B",t:"comparing two competing scientific theories"},{k:"C",t:"tracing the chronological development of an idea"},{k:"D",t:"challenging a commonly held assumption with evidence"}], correctKey:"D" },
+  { id:"Q-1076", subject:"Math", difficulty:"Hard",   topic:"Exponentials",          status:"live",    updated:"1w ago",  author:"Minh Trần",    text:"A population of bacteria doubles every 3 hours. If there are 500 bacteria at t = 0, how many are there at t = 12 hours?", choices:[{k:"A",t:"4,000"},{k:"B",t:"6,000"},{k:"C",t:"8,000"},{k:"D",t:"16,000"}], correctKey:"C" },
+  { id:"Q-1075", subject:"Reading",  difficulty:"Easy",   topic:"Central idea",      status:"live",    updated:"1w ago",  author:"Hoa Lê",       text:"Which choice best states the main idea of the passage?", choices:[{k:"A",t:"Urban farming has become more popular in recent decades."},{k:"B",t:"Community gardens improve both food access and social cohesion."},{k:"C",t:"Local governments should fund more green spaces."},{k:"D",t:"Organic produce is healthier than conventional alternatives."}], correctKey:"B" },
 ];
 
 // AI review queue
 const REVIEW = [
   {
     id: "AI-2041",
-    subject: "R&W", topic: "Transitions", difficulty: "Medium",
+    subject: "Reading", topic: "Transitions", difficulty: "Medium",
     generated: "3 hours ago", confidence: 0.92,
     text: "The Mekong Delta has long supported one of the densest populations of freshwater fish species in Southeast Asia. ______ recent surveys show that more than a third of those species are now in decline, largely due to upstream damming and saltwater intrusion.",
     answers: [
@@ -139,7 +139,7 @@ const REVIEW = [
   },
   {
     id: "AI-2038",
-    subject: "R&W", topic: "Word in context", difficulty: "Medium",
+    subject: "Reading", topic: "Word in context", difficulty: "Medium",
     generated: "yesterday", confidence: 0.84,
     text: "As used in the passage, the word “______” most nearly means ‘carefully considered’ — the committee’s deliberate approach to the reform was unusual in a political climate that generally rewarded speed.",
     answers: [

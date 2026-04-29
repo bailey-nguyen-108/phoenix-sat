@@ -24,12 +24,13 @@ function StudentDashboard({ go }) {
 
       <div className="grid-4" style={{marginBottom: 24}}>
         <StatCard label="Day streak"   value={<><span>{d.streak}</span><span style={{fontSize:22, color:'var(--ink-3)'}}> days</span></>}
-                  sub={<span className="row" style={{gap:6}}><IFire size={13}/> longest: 18</span>} />
+                  sub={<span className="row" style={{gap:6}}><IFire size={13}/> longest: 18</span>}
+                  accent="var(--orange)" />
         <StatCard label="Sessions"     value={d.sessions} sub="completed this month" />
         <StatCard label="Avg accuracy" value={<span className="num">{Math.round(d.avgAccuracy*100)}%</span>}
                   sub="last 14 sessions" />
-        <StatCard label="Est. score"   value={<span className="num">{d.estScore}</span>}
-                  sub={<span className="tag tag-ok" style={{fontSize:11}}>+{d.scoreDelta} vs. last month</span>} />
+        <StatCard label="Recent score" value={<span className="num">{d.estScore}</span>}
+                  sub="last full session" />
       </div>
 
       <div className="grid-2">
@@ -77,22 +78,21 @@ function StudentDashboard({ go }) {
 
         <div className="col" style={{gap: 16}}>
           <div className="card" style={{padding: 24}}>
-            <div className="small muted" style={{textTransform:'uppercase', letterSpacing:'.08em', fontWeight:500, marginBottom: 12}}>Score snapshot</div>
+            <div className="small muted" style={{textTransform:'uppercase', letterSpacing:'.08em', fontWeight:500, marginBottom: 12}}>Last session scores</div>
             <div className="row" style={{gap: 20, alignItems:'center'}}>
               <ScoreDonut value={d.estScore} max={1600} />
               <div className="col" style={{gap: 10, flex: 1}}>
                 <Line label="Math"              val={670} max={800} />
-                <Line label="Reading & Writing" val={670} max={800} />
+                <Line label="Reading" val={670} max={800} />
               </div>
             </div>
-            <div className="divider" style={{margin:'18px 0'}}/>
-            <div className="small muted">Target for May: <span style={{color:'var(--ink)', fontWeight:500}}>1420</span> · 80 points to go.</div>
+
           </div>
 
           <div className="card" style={{padding: 24}}>
             <div className="row between" style={{marginBottom: 10}}>
               <h3 style={{fontSize: 17}}>Next up</h3>
-              <span className="tag">AI-curated</span>
+
             </div>
             <p className="muted" style={{fontSize: 14, marginBottom: 14}}>
               We built a focused set around your two weakest topics. 12 questions, mixed difficulty.
@@ -112,11 +112,11 @@ function StudentDashboard({ go }) {
   );
 }
 
-function StatCard({ label, value, sub }) {
+function StatCard({ label, value, sub, accent }) {
   return (
-    <div className="card card-hov stat">
+    <div className="card card-hov stat" style={accent ? {borderTop: `3px solid ${accent}`} : {}}>
       <div className="label">{label}</div>
-      <div className="value num">{value}</div>
+      <div className="value num" style={accent ? {color: accent} : {}}>{value}</div>
       <div className="sub">{sub}</div>
     </div>
   );
@@ -160,7 +160,14 @@ function SessionSetup({ go }) {
   const [subject, setSubject]       = useState('Math');
   const [difficulty, setDifficulty] = useState('Medium');
   const [count, setCount]           = useState(15);
-  const [focus, setFocus]           = useState('adaptive');
+  const [subtopic, setSubtopic]     = useState('Any');
+
+  const SUBTOPICS = {
+    'Math':    ['Linear equations', 'Systems of equations', 'Inequalities', 'Quadratics', 'Exponentials', 'Polynomials', 'Ratios & rates', 'Percentages', 'Statistics', 'Circle theorems', 'Triangle properties', 'Trigonometry'],
+    'Reading': ['Central idea', 'Command of evidence', 'Data inferences', 'Word in context', 'Text structure', 'Transitions', 'Rhetorical synthesis', 'Boundaries', 'Subject-verb agreement'],
+  };
+
+  function changeSubject(s){ setSubject(s); setSubtopic('Any'); }
 
   return (
     <div className="view screen" data-screen-label="Student · Session setup" style={{maxWidth: 880}}>
@@ -177,10 +184,10 @@ function SessionSetup({ go }) {
       <div className="col" style={{gap: 32}}>
         <Section title="1 · Subject" hint="Pick one">
           <div className="grid-2" style={{gridTemplateColumns:'1fr 1fr', gap: 14}}>
-            <OptCard selected={subject==='Math'} onClick={()=>setSubject('Math')}
+            <OptCard selected={subject==='Math'} onClick={()=>changeSubject('Math')}
                      title="Math" desc="Algebra, advanced math, problem-solving & data, geometry" />
-            <OptCard selected={subject==='R&W'}  onClick={()=>setSubject('R&W')}
-                     title="Reading &amp; Writing" desc="Craft &amp; structure, information &amp; ideas, standard English, expression" />
+            <OptCard selected={subject==='Reading'}  onClick={()=>changeSubject('Reading')}
+                     title="Reading" desc="Craft &amp; structure, information &amp; ideas, standard English, expression" />
           </div>
         </Section>
 
@@ -218,14 +225,21 @@ function SessionSetup({ go }) {
           </div>
         </Section>
 
-        <Section title="4 · Focus" hint="Optional">
-          <div className="grid-3" style={{gap: 14}}>
-            <OptCard selected={focus==='adaptive'} onClick={()=>setFocus('adaptive')}
-                     title="Adaptive" desc="We weight your weak sub-topics automatically." />
-            <OptCard selected={focus==='weak'} onClick={()=>setFocus('weak')}
-                     title="Only weak topics" desc="Drill the five lowest-accuracy tags you have." />
-            <OptCard selected={focus==='random'} onClick={()=>setFocus('random')}
-                     title="Full mix" desc="Random across the whole bank. Good for a checkpoint." />
+        <Section title="4 · Sub-topic" hint="Optional">
+          <div style={{display:'flex', flexWrap:'wrap', gap: 8}}>
+            {['Any', ...SUBTOPICS[subject]].map(t => (
+              <button key={t}
+                      onClick={() => setSubtopic(t)}
+                      className="tag"
+                      style={{
+                        cursor:'pointer', padding:'8px 14px', fontSize: 13,
+                        background: subtopic===t ? 'var(--accent)' : 'var(--surface)',
+                        borderColor: subtopic===t ? 'var(--accent)' : 'var(--border)',
+                        color: subtopic===t ? '#fff' : 'var(--ink-2)',
+                      }}>
+                {t}
+              </button>
+            ))}
           </div>
         </Section>
 
@@ -234,7 +248,7 @@ function SessionSetup({ go }) {
             <div>
               <div className="small muted" style={{textTransform:'uppercase', letterSpacing:'.06em', fontWeight:500}}>Ready</div>
               <div style={{fontFamily:'var(--serif)', fontSize:18, marginTop: 4}}>
-                {subject==='R&W' ? 'Reading & Writing' : 'Math'} · {difficulty} · {count} questions
+                {subject} · {difficulty} · {count} questions{subtopic !== 'Any' ? ` · ${subtopic}` : ''}
               </div>
             </div>
           </div>
@@ -411,7 +425,7 @@ function ResultsScreen({ go, lowScore, startBooster }) {
         <StatCard label="Accuracy"  value={<span className="num">{pct}%</span>} sub={`${r.score} correct · ${r.total - r.score} wrong`} />
         <StatCard label="Time"      value={<span className="num" style={{fontSize:34}}>{r.duration}</span>} sub="avg 89s / question" />
         <StatCard label="Pace"      value={<span style={{fontSize: 24}}>On target</span>} sub="within recommended window" />
-        <StatCard label="Projected" value={<span className="num">+15</span>} sub="points toward target score" />
+
       </div>
 
       <div className="grid-2">
