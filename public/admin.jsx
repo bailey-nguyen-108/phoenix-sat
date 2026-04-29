@@ -2,6 +2,7 @@
 const { useState: useStateA, useEffect: useEffectA } = React;
 
 function AdminBank({ go }) {
+  const [bankItems, setBankItems]   = useStateA(BANK);
   const [subject, setSubject]       = useStateA('All');
   const [difficulty, setDifficulty] = useStateA('All');
   const [status, setStatus]         = useStateA('All');
@@ -11,7 +12,7 @@ function AdminBank({ go }) {
   const [filterOpen, setFilterOpen] = useStateA(false);
 
   const activeFilters = [subject, difficulty, status].filter(v => v !== 'All').length;
-  const rows = BANK.filter(r =>
+  const rows = bankItems.filter(r =>
     (subject === 'All' || r.subject === subject) &&
     (difficulty === 'All' || r.difficulty === difficulty) &&
     (status === 'All' || r.status === status) &&
@@ -29,7 +30,7 @@ function AdminBank({ go }) {
         return;
       }
       if (context?.modal === 'admin.question_bank.edit') {
-        const target = rows.find((row) => row.id === context.target) || rows[0] || BANK[0];
+        const target = rows.find((row) => row.id === context.target) || rows[0] || bankItems[0];
         if (target) {
           setEditRow(target);
           setNewOpen(false);
@@ -38,7 +39,18 @@ function AdminBank({ go }) {
     };
     window.addEventListener('sat:open-comment-context', handler);
     return () => window.removeEventListener('sat:open-comment-context', handler);
-  }, [rows]);
+  }, [rows, bankItems]);
+
+  function saveBankQuestion(question) {
+    setBankItems((items) => {
+      const exists = items.some((item) => item.id === question.id);
+      return exists
+        ? items.map((item) => item.id === question.id ? question : item)
+        : [question, ...items];
+    });
+    setNewOpen(false);
+    setEditRow(null);
+  }
 
   return (
     <div className="view screen" data-screen-label="Admin · Question bank">
@@ -47,7 +59,7 @@ function AdminBank({ go }) {
           <div className="small muted">Content</div>
           <h1 style={{marginTop:6}}>Question bank</h1>
           <p className="muted" style={{marginTop: 6, fontSize: 14}}>
-            {BANK.length} questions · {BANK.filter(b=>b.status==='pending').length} awaiting review
+            {bankItems.length} questions · {bankItems.filter(b=>b.status==='pending').length} awaiting review
           </p>
         </div>
         <div className="row" style={{gap:10}}>
@@ -118,7 +130,6 @@ function AdminBank({ go }) {
                 <td style={{textAlign:'right', paddingRight: 22}}>
                   <button className="icon-btn" title="Edit" onClick={()=>setEditRow(r)}><IEdit/></button>
                   <button className="icon-btn" title="Delete"><ITrash/></button>
-                  <button className="icon-btn" title="More"><IMore/></button>
                 </td>
               </tr>
             ))}
@@ -126,7 +137,7 @@ function AdminBank({ go }) {
         </table>
 
         <div className="row between" style={{padding:'14px 22px', borderTop:'1px solid var(--border)', color:'var(--ink-3)', fontSize:13}}>
-          <span>Showing <span className="num" style={{color:'var(--ink)'}}>{rows.length}</span> of {BANK.length}</span>
+          <span>Showing <span className="num" style={{color:'var(--ink)'}}>{rows.length}</span> of {bankItems.length}</span>
           <div className="row" style={{gap: 6}}>
             <button className="btn btn-ghost btn-sm" style={{padding:'6px 10px', fontSize:13}}>‹</button>
             <button className="btn btn-primary"      style={{padding:'6px 10px', fontSize:13}}>1</button>
@@ -137,33 +148,68 @@ function AdminBank({ go }) {
         </div>
       </div>
 
-      {newOpen   && <NewQuestionModal onClose={()=>setNewOpen(false)}/>}
-      {editRow   && <NewQuestionModal editing={editRow} onClose={()=>setEditRow(null)}/>}
+      {newOpen   && <NewQuestionModal nextId={nextBankQuestionId(bankItems)} onSave={saveBankQuestion} onClose={()=>setNewOpen(false)}/>}
+      {editRow   && <NewQuestionModal editing={editRow} onSave={saveBankQuestion} onClose={()=>setEditRow(null)}/>}
     </div>
   );
 }
 
-function NewQuestionModal({ onClose, editing }){
+function nextBankQuestionId(items) {
+  const max = items.reduce((largest, item) => {
+    const match = String(item.id || '').match(/^Q-(\d+)$/);
+    return match ? Math.max(largest, Number(match[1])) : largest;
+  }, 1084);
+  return `Q-${max + 1}`;
+}
+
+function AdminModalPortal({ children }) {
+  return ReactDOM.createPortal(children, document.body);
+}
+
+function NewQuestionModal({ onClose, onSave, editing, nextId }){
   const [subject, setSubject] = useStateA(editing?.subject || 'Math');
   const [difficulty, setDifficulty] = useStateA(editing?.difficulty || 'Medium');
   const [topic, setTopic] = useStateA(editing?.topic || 'Linear equations');
   const [text, setText] = useStateA(editing?.text || '');
   const [choices, setChoices] = useStateA(editing?.choices || [{k:'A',t:''},{k:'B',t:''},{k:'C',t:''},{k:'D',t:''}]);
   const [correct, setCorrect] = useStateA(editing?.correctKey || 'A');
+  const [rationale, setRationale] = useStateA(editing?.rationale || '');
+
+  function setChoiceText(i, value) {
+    setChoices(choices.map((choice, index) => index === i ? {...choice, t: value} : choice));
+  }
+
+  function save(status = editing?.status || 'pending') {
+    onSave({
+      ...(editing || {}),
+      id: editing?.id || nextId || 'Q-1085',
+      subject,
+      difficulty,
+      topic,
+      status,
+      updated: 'Just now',
+      author: editing?.author || 'Bảo Phạm',
+      text,
+      choices,
+      correctKey: correct,
+      rationale
+    });
+  }
 
   const stop = e => e.stopPropagation();
   return (
-    <div onClick={onClose} style={{position:'fixed', inset:0, background:'rgba(20,20,20,0.35)', display:'grid', placeItems:'center', zIndex:40, padding:24}}>
-      <div
-        onClick={stop}
-        className="card"
-        data-comment-modal={editing ? 'admin.question_bank.edit' : 'admin.question_bank.new'}
-        data-comment-target={editing?.id || 'new'}
-        style={{width:'min(720px, 100%)', maxHeight:'90vh', overflow:'auto', padding:0, boxShadow:'var(--shadow-lg)'}}
-      >
+    <AdminModalPortal>
+      <div onClick={onClose} style={{position:'fixed', inset:0, background:'rgba(20,20,20,0.35)', display:'grid', placeItems:'center', zIndex:60, padding:24}}>
+        <div
+          onClick={stop}
+          className="card"
+          data-comment-modal={editing ? 'admin.question_bank.edit' : 'admin.question_bank.new'}
+          data-comment-target={editing?.id || 'new'}
+          style={{width:'min(720px, 100%)', maxHeight:'90vh', overflow:'auto', padding:0, boxShadow:'var(--shadow-lg)'}}
+        >
         <div className="row between" style={{padding:'18px 22px', borderBottom:'1px solid var(--border)'}}>
           <div>
-            <div className="small muted">Content</div>
+            <div className="small muted">{editing ? `${editing.id} · ${editing.subject}` : 'Content'}</div>
             <h3 style={{marginTop: 2}}>{editing ? 'Edit question' : 'New question'}</h3>
           </div>
           <button className="icon-btn" onClick={onClose}><IX/></button>
@@ -171,11 +217,17 @@ function NewQuestionModal({ onClose, editing }){
 
         <div className="col" style={{padding:'20px 22px', gap: 18}}>
           <div className="row" style={{gap: 14}}>
+            {!editing && (
+              <label className="col" style={{flex:1, gap:6}}>
+                <span className="small muted">Subject</span>
+                <select value={subject} onChange={e=>setSubject(e.target.value)}>
+                  <option>Math</option><option>Reading</option>
+                </select>
+              </label>
+            )}
             <label className="col" style={{flex:1, gap:6}}>
-              <span className="small muted">Subject</span>
-              <select value={subject} onChange={e=>setSubject(e.target.value)}>
-                <option>Math</option><option>Reading</option>
-              </select>
+              <span className="small muted">Sub-topic</span>
+              <input type="text" value={topic} onChange={e=>setTopic(e.target.value)}/>
             </label>
             <label className="col" style={{flex:1, gap:6}}>
               <span className="small muted">Difficulty</span>
@@ -183,43 +235,66 @@ function NewQuestionModal({ onClose, editing }){
                 <option>Easy</option><option>Medium</option><option>Hard</option>
               </select>
             </label>
-            <label className="col" style={{flex:1, gap:6}}>
-              <span className="small muted">Sub-topic</span>
-              <input type="text" value={topic} onChange={e=>setTopic(e.target.value)}/>
-            </label>
           </div>
 
           <label className="col" style={{gap:6}}>
             <span className="small muted">Question text</span>
-            <textarea rows="4" value={text} onChange={e=>setText(e.target.value)} placeholder="Type the question prompt…" style={{resize:'vertical', fontFamily:'var(--serif)', fontSize:15}}/>
+            <textarea rows="5" value={text} onChange={e=>setText(e.target.value)} placeholder="Type the question prompt…" style={{resize:'vertical', fontFamily:'var(--serif)', fontSize:15, lineHeight:1.5}}/>
           </label>
 
           <div className="col" style={{gap:8}}>
-            <span className="small muted">Answer choices · pick the correct one</span>
+            <span className="small muted">Answer choices · click a letter to mark correct</span>
             {choices.map((c, i) => (
-              <div key={c.k} className="row" style={{gap:10}}>
-                <button className={"choice " + (correct===c.k ? 'selected':'')} onClick={()=>setCorrect(c.k)}
-                        style={{padding:'8px 12px', flex:'none'}}>
-                  <div className="key">{c.k}</div>
+              <div key={c.k} className="row" style={{gap:10, alignItems:'center'}}>
+                <button onClick={() => setCorrect(c.k)}
+                        title="Mark as correct"
+                        style={{
+                          width:34, height:34, borderRadius:'50%', flex:'none',
+                          border: '1px solid ' + (correct === c.k ? 'var(--ok)' : 'var(--border)'),
+                          background: correct === c.k ? 'var(--ok)' : 'var(--surface)',
+                          color: correct === c.k ? '#fff' : 'var(--ink-2)',
+                          fontSize:13, fontWeight:500, cursor:'pointer'
+                        }}>
+                  {c.k}
                 </button>
                 <input type="text" value={c.t}
-                       onChange={e => setChoices(choices.map((x,j) => j===i ? {...x, t: e.target.value} : x))}
+                       onChange={e => setChoiceText(i, e.target.value)}
                        placeholder={"Choice " + c.k} style={{flex:1}}/>
+                {correct === c.k && <span className="tag tag-ok" style={{fontSize:11}}>Correct</span>}
               </div>
             ))}
           </div>
+
+          {editing && (
+            <label className="col" style={{gap:6}}>
+              <span className="small muted">Generator rationale</span>
+              <textarea
+                rows="4"
+                value={rationale}
+                onChange={e=>setRationale(e.target.value)}
+                style={{resize:'vertical', fontSize:14, lineHeight:1.5}}
+              />
+            </label>
+          )}
         </div>
 
         <div className="row between" style={{padding:'14px 22px', borderTop:'1px solid var(--border)', background:'var(--surface-2)'}}>
-          <span className="small muted">Saves as <strong style={{color:'var(--ink-2)', fontWeight:500}}>pending review</strong> until published.</span>
+          <span className="small muted">
+            {editing ? (
+              <>Edits stay in the queue until you approve &amp; publish.</>
+            ) : (
+              <>Saves as <strong style={{color:'var(--ink-2)', fontWeight:500}}>pending review</strong> until published.</>
+            )}
+          </span>
           <div className="row" style={{gap:10}}>
             <button className="btn btn-quiet" onClick={onClose}>Cancel</button>
-            <button className="btn btn-ghost" onClick={onClose}>Save as draft</button>
-            <button className="btn btn-primary" onClick={onClose}><ICheck/> {editing ? 'Save changes' : 'Create question'}</button>
+            {!editing && <button className="btn btn-ghost" onClick={() => save('pending')}>Save as draft</button>}
+            <button className="btn btn-primary" onClick={() => save(editing?.status || 'pending')}><ICheck/> {editing ? 'Save changes' : 'Create question'}</button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </AdminModalPortal>
   );
 }
 
@@ -415,14 +490,15 @@ function ReviewEditModal({ q, onSave, onClose }){
 
   const stop = e => e.stopPropagation();
   return (
-    <div onClick={onClose} style={{position:'fixed', inset:0, background:'rgba(20,20,20,0.4)', display:'grid', placeItems:'center', zIndex:60, padding:24}}>
-      <div
-        onClick={stop}
-        className="card"
-        data-comment-modal="admin.ai_review.edit"
-        data-comment-target={q.id}
-        style={{width:'min(720px, 100%)', maxHeight:'90vh', overflow:'auto', padding:0, boxShadow:'var(--shadow-lg)'}}
-      >
+    <AdminModalPortal>
+      <div onClick={onClose} style={{position:'fixed', inset:0, background:'rgba(20,20,20,0.4)', display:'grid', placeItems:'center', zIndex:60, padding:24}}>
+        <div
+          onClick={stop}
+          className="card"
+          data-comment-modal="admin.ai_review.edit"
+          data-comment-target={q.id}
+          style={{width:'min(720px, 100%)', maxHeight:'90vh', overflow:'auto', padding:0, boxShadow:'var(--shadow-lg)'}}
+        >
         <div className="row between" style={{padding:'18px 22px', borderBottom:'1px solid var(--border)'}}>
           <div>
             <div className="small muted">{q.id} · {q.subject}</div>
@@ -486,11 +562,12 @@ function ReviewEditModal({ q, onSave, onClose }){
         <div className="row between" style={{padding:'14px 22px', borderTop:'1px solid var(--border)', background:'var(--surface-2)'}}>
           <span className="small muted">Edits stay in the queue until you approve &amp; publish.</span>
           <div className="row" style={{gap:10}}>
-            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button className="btn btn-quiet" onClick={onClose}>Cancel</button>
             <button className="btn btn-primary" onClick={save}><ICheck/> Save changes</button>
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </AdminModalPortal>
   );
 }
