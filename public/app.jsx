@@ -74,8 +74,8 @@ function App() {
 
   // pick default screen when switching roles
   useEffectApp(() => {
-    if (role === 'student' && !['dashboard', 'setup', 'question', 'results', 'booster'].includes(screen)) setScreen('dashboard');
-    if (role === 'admin' && !['bank', 'generate', 'review', 'students', 'settings'].includes(screen)) setScreen('bank');
+    if (role === 'student' && !['dashboard', 'setup', 'question', 'results', 'booster', 'profile'].includes(screen)) setScreen('dashboard');
+    if (role === 'admin' && !['bank', 'generate', 'review', 'students', 'subscriptions', 'settings'].includes(screen)) setScreen('bank');
   }, [role, screen]);
 
   if (!authed) {
@@ -97,13 +97,15 @@ function App() {
   { id: 'setup', label: 'New session', icon: <IPlay />, locked: boosterRequired },
   { id: 'question', label: 'In session', icon: <IBook />, locked: boosterRequired },
   { id: 'results', label: 'Results', icon: <IChart /> },
-  ...(boosterRequired ? [{ id: 'booster', label: 'Booster — required', icon: <ILock />, accent: true }] : [])];
+  ...(boosterRequired ? [{ id: 'booster', label: 'Booster — required', icon: <ILock />, accent: true }] : []),
+  { id: 'profile', label: 'Profile & settings', icon: <ISettings /> }];
 
   const adminItems = [
   { id: 'bank', label: 'Question bank', icon: <IBook /> },
   { id: 'generate', label: 'Generate with AI', icon: <ISpark /> },
   { id: 'review', label: 'AI review', icon: <IInbox />, badge: 4 },
   { id: 'students', label: 'Students', icon: <IUsers /> },
+  { id: 'subscriptions', label: 'Subscriptions', icon: <IChart /> },
   { id: 'settings', label: 'Settings', icon: <ISettings /> }];
 
 
@@ -161,7 +163,12 @@ function App() {
         )}
 
         <div className="side-foot">
-          <div className="side-user">
+          <div
+            className="side-user"
+            style={{ cursor: role === 'student' ? 'pointer' : 'default' }}
+            onClick={() => role === 'student' && setScreen('profile')}
+            title={role === 'student' ? 'Profile & settings' : undefined}
+          >
             <div className="avatar">LN</div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 500, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
@@ -169,7 +176,7 @@ function App() {
               </div>
               <div className="small muted">{role === 'student' ? 'Class of \u201926' : 'Admin \u00b7 Curriculum'}</div>
             </div>
-            <button title="Sign out" onClick={() => { setAuthed(false); localStorage.removeItem('sat.authed'); }}
+            <button title="Sign out" onClick={(event) => { event.stopPropagation(); setAuthed(false); localStorage.removeItem('sat.authed'); }}
               style={{ background:'none', border:'none', cursor:'pointer', color:'var(--ink-4)', padding:4, borderRadius:6, display:'grid', placeItems:'center' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
@@ -197,9 +204,11 @@ function App() {
         {role === 'student' && screen === 'question' && <QuestionScreen go={setScreen} />}
         {role === 'student' && screen === 'results' && <ResultsScreen go={setScreen} lowScore={lowScore} startBooster={() => setScreen('booster')} />}
         {role === 'student' && screen === 'booster' && <AdaptiveBooster go={setScreen} finish={() => {setBoosterDone(true);setLowScore(false);}} />}
+        {role === 'student' && screen === 'profile' && <StudentProfile go={setScreen} />}
         {role === 'admin' && screen === 'bank' && <AdminBank go={setScreen} />}
         {role === 'admin' && screen === 'generate' && <AdminGenerate go={setScreen} />}
         {role === 'admin' && screen === 'review' && <AdminReview go={setScreen} />}
+        {role === 'admin' && screen === 'subscriptions' && <AdminSubscriptions go={setScreen} />}
         {role === 'admin' && (screen === 'students' || screen === 'settings') && <PlaceholderScreen title={labelFor(role, screen)} />}
       </main>
 
@@ -216,8 +225,8 @@ function App() {
 
 function labelFor(role, screen) {
   return {
-    dashboard: 'Dashboard', setup: 'New session', question: 'Question', results: 'Results', booster: 'Adaptive booster',
-    bank: 'Question bank', generate: 'Generate with AI', review: 'AI review queue', students: 'Students', settings: 'Settings'
+    dashboard: 'Dashboard', setup: 'New session', question: 'Question', results: 'Results', booster: 'Adaptive booster', profile: 'Profile & settings',
+    bank: 'Question bank', generate: 'Generate with AI', review: 'AI review queue', students: 'Students', subscriptions: 'Subscriptions', settings: 'Settings'
   }[screen] || screen;
 }
 
@@ -228,13 +237,15 @@ function screenIdFor(role, screen) {
       setup: 'student.session_setup',
       question: 'student.question',
       results: 'student.results',
-      booster: 'student.adaptive_booster'
+      booster: 'student.adaptive_booster',
+      profile: 'student.profile'
     },
     admin: {
       bank: 'admin.question_bank',
       generate: 'admin.generate',
       review: 'admin.ai_review',
       students: 'admin.students',
+      subscriptions: 'admin.subscriptions',
       settings: 'admin.settings'
     }
   };
@@ -248,11 +259,13 @@ function screenFromScreenId(screenId) {
     'student.question': { role: 'student', screen: 'question' },
     'student.results': { role: 'student', screen: 'results' },
     'student.adaptive_booster': { role: 'student', screen: 'booster' },
+    'student.profile': { role: 'student', screen: 'profile' },
     'auth.sign_in': { role: 'auth', screen: 'sign_in' },
     'admin.question_bank': { role: 'admin', screen: 'bank' },
     'admin.generate': { role: 'admin', screen: 'generate' },
     'admin.ai_review': { role: 'admin', screen: 'review' },
     'admin.students': { role: 'admin', screen: 'students' },
+    'admin.subscriptions': { role: 'admin', screen: 'subscriptions' },
     'admin.settings': { role: 'admin', screen: 'settings' }
   };
   return map[screenId] || null;

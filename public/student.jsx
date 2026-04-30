@@ -508,4 +508,152 @@ function ResultsScreen({ go, lowScore, startBooster }) {
   );
 }
 
-Object.assign(window, { StudentDashboard, SessionSetup, QuestionScreen, ResultsScreen });
+/* ---------------- Student Profile / Account Settings ---------------- */
+function StudentProfile({ go }) {
+  const [editingName, setEditingName] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [editingTestDate, setEditingTestDate] = useState(false);
+  const [nameVal, setNameVal] = useState('Linh Nguyễn');
+  const [emailVal, setEmailVal] = useState('linh.nguyen@example.com');
+  const [testDateVal, setTestDateVal] = useState('2025-05-03');
+  const [pwOpen, setPwOpen] = useState(false);
+  const [curPw, setCurPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [newPw2, setNewPw2] = useState('');
+  const [pwMsg, setPwMsg] = useState('');
+
+  function savePassword(e) {
+    e.preventDefault();
+    if (!curPw) { setPwMsg('Enter your current password.'); return; }
+    if (newPw.length < 6) { setPwMsg('New password must be at least 6 characters.'); return; }
+    if (newPw !== newPw2) { setPwMsg('Passwords don\'t match.'); return; }
+    setPwMsg('saved');
+    setTimeout(() => { setPwOpen(false); setCurPw(''); setNewPw(''); setNewPw2(''); setPwMsg(''); }, 800);
+  }
+
+  const FieldRow = ({ label, value, editing, onEdit, onSave, onCancel, children }) => (
+    <div style={{padding:'18px 0', borderBottom:'1px solid var(--border-2)', display:'grid', gridTemplateColumns:'200px 1fr auto', gap:16, alignItems:'center'}}>
+      <div style={{fontSize:13, color:'var(--ink-3)', fontWeight:500}}>{label}</div>
+      <div style={{fontSize:14.5, color:'var(--ink)'}}>
+        {editing ? children : value}
+      </div>
+      <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+        {editing ? (
+          <>
+            <button className="btn btn-quiet" style={{padding:'6px 12px', fontSize:13}} onClick={onCancel}>Cancel</button>
+            <button className="btn btn-primary" style={{padding:'6px 12px', fontSize:13}} onClick={onSave}>Save</button>
+          </>
+        ) : (
+          <button className="btn btn-ghost" style={{padding:'6px 12px', fontSize:13}} onClick={onEdit}>Edit</button>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="view screen" data-screen-label="Student · Profile" style={{maxWidth:860}}>
+      <div style={{marginBottom:32}}>
+        <div className="small muted" style={{marginBottom:6}}>Account</div>
+        <h1>Profile &amp; settings</h1>
+      </div>
+
+      <div className="card" style={{padding:'0 24px', marginBottom:24}}>
+        <div style={{padding:'18px 0 12px', display:'flex', alignItems:'center', gap:16, borderBottom:'1px solid var(--border)'}}>
+          <div className="avatar" style={{width:48, height:48, fontSize:18, background:'var(--accent-soft)', color:'var(--accent-ink)', border:'1px solid var(--accent-border)'}}>
+            LN
+          </div>
+          <div>
+            <div style={{fontFamily:'var(--serif)', fontSize:20, fontWeight:500}}>{nameVal}</div>
+            <div className="small muted" style={{marginTop:2}}>Class of '26 · Student</div>
+          </div>
+        </div>
+
+        <FieldRow label="Full name" value={nameVal} editing={editingName}
+          onEdit={() => setEditingName(true)}
+          onSave={() => setEditingName(false)}
+          onCancel={() => setEditingName(false)}>
+          <input type="text" value={nameVal} onChange={e => setNameVal(e.target.value)} style={{width:'100%'}} autoFocus />
+        </FieldRow>
+
+        <FieldRow label="Email" value={emailVal} editing={editingEmail}
+          onEdit={() => setEditingEmail(true)}
+          onSave={() => setEditingEmail(false)}
+          onCancel={() => setEditingEmail(false)}>
+          <input type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} style={{width:'100%'}} autoFocus />
+        </FieldRow>
+
+        <FieldRow label="Test date" value={new Date(`${testDateVal}T00:00:00`).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })} editing={editingTestDate}
+          onEdit={() => setEditingTestDate(true)}
+          onSave={() => setEditingTestDate(false)}
+          onCancel={() => setEditingTestDate(false)}>
+          <input type="date" value={testDateVal} onChange={e => setTestDateVal(e.target.value)} style={{width:'100%'}} autoFocus />
+        </FieldRow>
+      </div>
+
+      <div className="card" style={{padding:'0 24px', marginBottom:24}}>
+        <div style={{padding:'18px 0', borderBottom:'1px solid var(--border)'}}>
+          <div style={{fontFamily:'var(--serif)', fontSize:17, fontWeight:500, marginBottom:2}}>Subscription</div>
+        </div>
+        <div style={{padding:'18px 0', display:'grid', gridTemplateColumns:'200px 1fr', gap:16, alignItems:'center'}}>
+          <div style={{fontSize:13, color:'var(--ink-3)', fontWeight:500}}>Current plan</div>
+          <div style={{display:'flex', alignItems:'center', gap:10}}>
+            <span style={{fontSize:14.5, color:'var(--ink)', fontWeight:500}}>Phoenix Prep Pro</span>
+            <span className="tag tag-ok" style={{fontSize:11}}><span style={{width:6, height:6, borderRadius:'50%', background:'var(--ok)', display:'inline-block', marginRight:4}}></span>Active</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{padding:'0 24px', marginBottom:24}}>
+        <div style={{padding:'18px 0', borderBottom:'1px solid var(--border)'}}>
+          <div style={{fontFamily:'var(--serif)', fontSize:17, fontWeight:500}}>Password &amp; security</div>
+        </div>
+        {!pwOpen ? (
+          <div style={{padding:'18px 0', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16}}>
+            <div>
+              <div style={{fontSize:14.5, color:'var(--ink)'}}>Password</div>
+              <div className="small muted" style={{marginTop:2}}>Last changed 3 months ago</div>
+            </div>
+            <button className="btn btn-ghost" style={{padding:'6px 12px', fontSize:13}} onClick={() => setPwOpen(true)}>
+              Change password
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={savePassword} style={{padding:'20px 0'}}>
+            <div className="col" style={{gap:14, maxWidth:400}}>
+              <label className="col" style={{gap:6}}>
+                <span className="small muted">Current password</span>
+                <input type="password" value={curPw} onChange={e => setCurPw(e.target.value)} placeholder="••••••••" autoFocus />
+              </label>
+              <label className="col" style={{gap:6}}>
+                <span className="small muted">New password</span>
+                <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="••••••••" />
+              </label>
+              <label className="col" style={{gap:6}}>
+                <span className="small muted">Confirm new password</span>
+                <input type="password" value={newPw2} onChange={e => setNewPw2(e.target.value)} placeholder="••••••••" />
+              </label>
+            </div>
+            {pwMsg && pwMsg !== 'saved' && (
+              <div style={{marginTop:12, padding:'9px 13px', borderRadius:8, background:'var(--bad-soft)', color:'var(--bad)', fontSize:13,
+                border:'1px solid color-mix(in srgb, var(--bad) 20%, white)', maxWidth:400}}>
+                {pwMsg}
+              </div>
+            )}
+            {pwMsg === 'saved' && (
+              <div style={{marginTop:12, padding:'9px 13px', borderRadius:8, background:'var(--ok-soft)', color:'var(--ok)', fontSize:13,
+                border:'1px solid color-mix(in srgb, var(--ok) 25%, white)', maxWidth:400}}>
+                Password updated.
+              </div>
+            )}
+            <div className="row" style={{gap:10, marginTop:18}}>
+              <button type="button" className="btn btn-ghost" onClick={() => { setPwOpen(false); setPwMsg(''); }}>Cancel</button>
+              <button type="submit" className="btn btn-primary">Update password</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { StudentDashboard, SessionSetup, QuestionScreen, ResultsScreen, StudentProfile });
