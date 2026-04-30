@@ -253,7 +253,7 @@ function SessionSetup({ go }) {
             </div>
           </div>
           <div className="row" style={{gap: 10}}>
-            <button className="btn btn-ghost" onClick={()=>go('dashboard')}>Cancel</button>
+            <button className="btn btn-ghost btn-lg" onClick={()=>go('dashboard')}>Cancel</button>
             <button className="btn btn-primary btn-lg" onClick={()=>go('question')}>
               Begin session <IArrow />
             </button>
@@ -500,7 +500,7 @@ function ResultsScreen({ go, lowScore, startBooster }) {
             <p className="muted small" style={{marginBottom:14}}>
               You missed three Transitions questions. A 10-question focused drill should take ~12 minutes.
             </p>
-            <button className="btn btn-primary" onClick={()=>go('setup')}>Start focused drill <IArrow/></button>
+            <button className="btn btn-primary" onClick={()=>go('setup')}>Practice again <IArrow/></button>
           </div>
         </div>
       </div>

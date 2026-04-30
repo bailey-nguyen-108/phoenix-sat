@@ -291,8 +291,11 @@ function installCommentStyles() {
     .comment-toggle {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
-      padding: 10px 14px;
+      min-width: 132px;
+      height: 44px;
+      padding: 0 18px;
       border-radius: 999px;
       border: 1px solid transparent;
       background: transparent;
