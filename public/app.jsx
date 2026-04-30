@@ -75,7 +75,7 @@ function App() {
   // pick default screen when switching roles
   useEffectApp(() => {
     if (role === 'student' && !['dashboard', 'setup', 'question', 'results', 'booster', 'profile'].includes(screen)) setScreen('dashboard');
-    if (role === 'admin' && !['bank', 'generate', 'review', 'students', 'subscriptions', 'settings'].includes(screen)) setScreen('bank');
+    if (role === 'admin' && !['bank', 'generate', 'review', 'subscriptions'].includes(screen)) setScreen('bank');
   }, [role, screen]);
 
   if (!authed) {
@@ -104,9 +104,7 @@ function App() {
   { id: 'bank', label: 'Question bank', icon: <IBook /> },
   { id: 'generate', label: 'Generate with AI', icon: <ISpark /> },
   { id: 'review', label: 'AI review', icon: <IInbox />, badge: 4 },
-  { id: 'students', label: 'Students', icon: <IUsers /> },
-  { id: 'subscriptions', label: 'Subscriptions', icon: <IChart /> },
-  { id: 'settings', label: 'Settings', icon: <ISettings /> }];
+  { id: 'subscriptions', label: 'Subscriptions', icon: <IChart /> }];
 
 
   const items = role === 'student' ? studentItems : adminItems;
@@ -678,8 +676,29 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
     const body = draft;
     const commentBody = text.trim();
     if (!body || !commentBody) return;
+    const tempId = `temp-${Date.now()}`;
+    const optimistic = {
+      id: tempId,
+      prototypeId,
+      screenId,
+      screenLabel,
+      x: body.x,
+      y: body.y,
+      xPercent: body.xPercent,
+      yPercent: body.yPercent,
+      viewportWidth: body.viewportWidth,
+      viewportHeight: body.viewportHeight,
+      elementLabel: body.elementLabel,
+      commentText: commentBody,
+      status,
+      createdBy: createdBy.trim() || 'Reviewer',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
     setSaving(true);
     setError('');
+    setComments((current) => [...current, optimistic]);
+    closeCard();
     fetch('/api/comments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -701,10 +720,12 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
     })
       .then((res) => res.ok ? res.json() : Promise.reject(new Error('Unable to save comment')))
       .then((data) => {
-        setComments([...comments, data.comment]);
-        closeCard();
+        setComments((current) => current.map((comment) => comment.id === tempId ? data.comment : comment));
       })
-      .catch((err) => setError(err.message || 'Unable to save comment'))
+      .catch((err) => {
+        setComments((current) => current.filter((comment) => comment.id !== tempId));
+        setError(err.message || 'Unable to save comment');
+      })
       .finally(() => setSaving(false));
   }
 
@@ -719,28 +740,54 @@ function CommentLayer({ prototypeId, screenId, screenLabel, onNavigateScreen }) 
   }
 
   function updateStatus(comment, status) {
+    const previous = comment;
+    const optimistic = { ...comment, status, updatedAt: new Date().toISOString() };
     setSaving(true);
+    setError('');
+    setComments((current) => current.map((item) => item.id === comment.id ? optimistic : item));
+    if (status === 'resolved') {
+      setSelected(null);
+    } else {
+      setSelected(optimistic);
+    }
     patchStatus(comment, status)
       .then((updated) => {
-        setComments(comments.map((item) => item.id === comment.id ? updated : item));
-        setSelected(updated);
+        setComments((current) => current.map((item) => item.id === comment.id ? updated : item));
+        if (status !== 'resolved') setSelected(updated);
       })
-      .catch((err) => setError(err.message || 'Unable to update comment'))
+      .catch((err) => {
+        setComments((current) => current.map((item) => item.id === comment.id ? previous : item));
+        setSelected(previous);
+        setError(err.message || 'Unable to update comment');
+      })
       .finally(() => setSaving(false));
   }
 
   function sendSelectedToSaola() {
     const targets = selectedComments.filter((comment) => comment.status !== 'ai_task_draft');
     if (targets.length === 0) return;
+    const previousById = Object.fromEntries(targets.map((comment) => [comment.id, comment]));
+    const optimisticById = Object.fromEntries(targets.map((comment) => [
+      comment.id,
+      { ...comment, status: 'ai_task_draft', updatedAt: new Date().toISOString() }
+    ]));
     setSaving(true);
+    setError('');
+    setComments((current) => current.map((comment) => optimisticById[comment.id] || comment));
+    setSelected((current) => current && optimisticById[current.id] ? optimisticById[current.id] : current);
+    setSelectedIds([]);
     Promise.all(targets.map((comment) => patchStatus(comment, 'ai_task_draft')))
       .then((updatedComments) => {
         const updatedById = Object.fromEntries(updatedComments.map((comment) => [comment.id, comment]));
-        setComments(comments.map((comment) => updatedById[comment.id] || comment));
+        setComments((current) => current.map((comment) => updatedById[comment.id] || comment));
         setSelected((current) => current && updatedById[current.id] ? updatedById[current.id] : current);
-        setSelectedIds([]);
       })
-      .catch((err) => setError(err.message || 'Unable to send selected comments'))
+      .catch((err) => {
+        setComments((current) => current.map((comment) => previousById[comment.id] || comment));
+        setSelected((current) => current && previousById[current.id] ? previousById[current.id] : current);
+        setSelectedIds(Object.keys(previousById));
+        setError(err.message || 'Unable to send selected comments');
+      })
       .finally(() => setSaving(false));
   }
 

@@ -54,12 +54,14 @@ function AdminGenerate({ go }){
       <div className="row between" style={{marginBottom: 32}}>
         <div>
           <div className="small muted">Content · AI tools</div>
-          <h1 style={{marginTop: 6}}>Generate questions</h1>
+          <div className="row" style={{gap:12, alignItems:'center', marginTop: 6}}>
+            <h1>Generate questions</h1>
+            <span className="tag"><ISpark size={11}/> AI-generated</span>
+          </div>
           <p className="muted" style={{marginTop: 6, fontSize: 14, maxWidth: 560}}>
             AI-generated drafts route directly to the review queue for approval before going live.
           </p>
         </div>
-        <span className="tag"><ISpark size={11}/> AI-generated</span>
       </div>
 
       <div style={{maxWidth: 560}}>
