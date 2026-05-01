@@ -160,14 +160,31 @@ function SessionSetup({ go }) {
   const [subject, setSubject]       = useState('Math');
   const [difficulty, setDifficulty] = useState('Medium');
   const [count, setCount]           = useState(15);
-  const [subtopic, setSubtopic]     = useState('Any');
+  const [subtopics, setSubtopics]   = useState([]);
 
   const SUBTOPICS = {
     'Math':    ['Linear equations', 'Systems of equations', 'Inequalities', 'Quadratics', 'Exponentials', 'Polynomials', 'Ratios & rates', 'Percentages', 'Statistics', 'Circle theorems', 'Triangle properties', 'Trigonometry'],
     'Reading': ['Central idea', 'Command of evidence', 'Data inferences', 'Word in context', 'Text structure', 'Transitions', 'Rhetorical synthesis', 'Boundaries', 'Subject-verb agreement'],
   };
 
-  function changeSubject(s){ setSubject(s); setSubtopic('Any'); }
+  function setQuestionCount(nextCount) {
+    setCount(nextCount);
+    setSubtopics((current) => current.slice(0, nextCount));
+  }
+
+  function changeSubject(s){ setSubject(s); setSubtopics([]); }
+
+  function toggleSubtopic(topic) {
+    if (topic === 'Any') {
+      setSubtopics([]);
+      return;
+    }
+    setSubtopics((current) => {
+      if (current.includes(topic)) return current.filter((item) => item !== topic);
+      if (current.length >= count) return current;
+      return [...current, topic];
+    });
+  }
 
   return (
     <div className="view screen" data-screen-label="Student · Session setup" style={{maxWidth: 880}}>
@@ -206,15 +223,15 @@ function SessionSetup({ go }) {
         <Section title="3 · Question count" hint="10–30">
           <div className="row" style={{gap: 20}}>
             <div className="stepper">
-              <button onClick={() => setCount(Math.max(10, count - 5))}>–</button>
+              <button onClick={() => setQuestionCount(Math.max(10, count - 5))}>–</button>
               <div className="val num">{count}</div>
-              <button onClick={() => setCount(Math.min(30, count + 5))}>+</button>
+              <button onClick={() => setQuestionCount(Math.min(30, count + 5))}>+</button>
             </div>
             <div className="row" style={{gap: 8}}>
               {[10,15,20,25].map(n => (
                 <button key={n}
                         className={"btn " + (count===n ? 'btn-primary' : 'btn-ghost')}
-                        onClick={() => setCount(n)}>
+                        onClick={() => setQuestionCount(n)}>
                   {n}
                 </button>
               ))}
@@ -225,21 +242,27 @@ function SessionSetup({ go }) {
           </div>
         </Section>
 
-        <Section title="4 · Sub-topic" hint="Optional">
+        <Section title="4 · Sub-topic" hint={`${subtopics.length}/${count} selected`}>
           <div style={{display:'flex', flexWrap:'wrap', gap: 8}}>
-            {['Any', ...SUBTOPICS[subject]].map(t => (
-              <button key={t}
-                      onClick={() => setSubtopic(t)}
-                      className="tag"
-                      style={{
-                        cursor:'pointer', padding:'8px 14px', fontSize: 13,
-                        background: subtopic===t ? 'var(--accent)' : 'var(--surface)',
-                        borderColor: subtopic===t ? 'var(--accent)' : 'var(--border)',
-                        color: subtopic===t ? '#fff' : 'var(--ink-2)',
-                      }}>
-                {t}
-              </button>
-            ))}
+            {['Any', ...SUBTOPICS[subject]].map(t => {
+              const selected = t === 'Any' ? subtopics.length === 0 : subtopics.includes(t);
+              const disabled = t !== 'Any' && !selected && subtopics.length >= count;
+              return (
+                <button key={t}
+                        onClick={() => toggleSubtopic(t)}
+                        disabled={disabled}
+                        className="tag"
+                        style={{
+                          cursor: disabled ? 'not-allowed' : 'pointer', padding:'8px 14px', fontSize: 13,
+                          opacity: disabled ? .45 : 1,
+                          background: selected ? 'var(--accent)' : 'var(--surface)',
+                          borderColor: selected ? 'var(--accent)' : 'var(--border)',
+                          color: selected ? '#fff' : 'var(--ink-2)',
+                        }}>
+                  {t}
+                </button>
+              );
+            })}
           </div>
         </Section>
 
@@ -248,7 +271,7 @@ function SessionSetup({ go }) {
             <div>
               <div className="small muted" style={{textTransform:'uppercase', letterSpacing:'.06em', fontWeight:500}}>Ready</div>
               <div style={{fontFamily:'var(--serif)', fontSize:18, marginTop: 4}}>
-                {subject} · {difficulty} · {count} questions{subtopic !== 'Any' ? ` · ${subtopic}` : ''}
+                {subject} · {difficulty} · {count} questions{subtopics.length ? ` · ${subtopics.join(', ')}` : ''}
               </div>
             </div>
           </div>
