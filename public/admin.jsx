@@ -466,39 +466,24 @@ function ReviewCard({ q, onAct }){
 /* ---------------- Admin Subscription Management ---------------- */
 function AdminSubscriptions({ go }) {
   const [query, setQuery] = useStateA('');
-  const [planFilter, setPlanFilter] = useStateA('All');
-  const [statusFilter, setStatusFilter] = useStateA('All');
-  const [filterOpen, setFilterOpen] = useStateA(false);
-  const [detailStudent, setDetailStudent] = useStateA(null);
-  const [actionStudent, setActionStudent] = useStateA(null);
 
   const SUBS = [
-    { id:'STU-001', name:'Linh Nguyễn', email:'linh.nguyen@example.com', plan:'Pro', status:'active', renewal:'Jun 1, 2025', amount:'$29/mo', payStatus:'paid', joined:'Jan 12, 2025' },
-    { id:'STU-002', name:'Minh Trần', email:'minh.tran@example.com', plan:'Pro', status:'active', renewal:'Jun 8, 2025', amount:'$29/mo', payStatus:'paid', joined:'Jan 20, 2025' },
-    { id:'STU-003', name:'Hương Phạm', email:'huong.pham@example.com', plan:'Free', status:'active', renewal:'—', amount:'Free', payStatus:'—', joined:'Feb 3, 2025' },
-    { id:'STU-004', name:'Bảo Lê', email:'bao.le@example.com', plan:'Pro', status:'past_due', renewal:'May 15, 2025', amount:'$29/mo', payStatus:'past_due', joined:'Nov 5, 2024' },
-    { id:'STU-005', name:'Thảo Vũ', email:'thao.vu@example.com', plan:'Pro', status:'active', renewal:'Jun 20, 2025', amount:'$29/mo', payStatus:'paid', joined:'Feb 14, 2025' },
-    { id:'STU-006', name:'Khôi Đặng', email:'khoi.dang@example.com', plan:'Pro', status:'cancelled', renewal:'May 3, 2025', amount:'$29/mo', payStatus:'—', joined:'Oct 18, 2024' },
-    { id:'STU-007', name:'An Ngô', email:'an.ngo@example.com', plan:'Free', status:'active', renewal:'—', amount:'Free', payStatus:'—', joined:'Mar 2, 2025' },
-    { id:'STU-008', name:'Mai Hoàng', email:'mai.hoang@example.com', plan:'Pro', status:'active', renewal:'Jul 1, 2025', amount:'$29/mo', payStatus:'paid', joined:'Mar 10, 2025' }
+    { id:'STU-001', name:'Linh Nguyễn', email:'linh.nguyen@example.com', joined:'Jan 12, 2025' },
+    { id:'STU-002', name:'Minh Trần', email:'minh.tran@example.com', joined:'Jan 20, 2025' },
+    { id:'STU-003', name:'Hương Phạm', email:'huong.pham@example.com', joined:'Feb 3, 2025' },
+    { id:'STU-004', name:'Bảo Lê', email:'bao.le@example.com', joined:'Nov 5, 2024' },
+    { id:'STU-005', name:'Thảo Vũ', email:'thao.vu@example.com', joined:'Feb 14, 2025' },
+    { id:'STU-006', name:'Khôi Đặng', email:'khoi.dang@example.com', joined:'Oct 18, 2024' },
+    { id:'STU-007', name:'An Ngô', email:'an.ngo@example.com', joined:'Mar 2, 2025' },
+    { id:'STU-008', name:'Mai Hoàng', email:'mai.hoang@example.com', joined:'Mar 10, 2025' }
   ];
 
-  const activeFilters = [planFilter, statusFilter].filter(v => v !== 'All').length;
   const rows = SUBS.filter(s =>
-    (planFilter === 'All' || s.plan === planFilter) &&
-    (statusFilter === 'All' || s.status === statusFilter) &&
     (query === '' || (s.name + s.email + s.id).toLowerCase().includes(query.toLowerCase()))
   );
-  const counts = {
-    active: SUBS.filter(s => s.status === 'active' && s.plan === 'Pro').length,
-    pastDue: SUBS.filter(s => s.status === 'past_due').length
-  };
 
-  function SubStatusTag({ status }) {
-    if(status === 'active') return <span className="tag tag-ok"><span style={{width:6,height:6,borderRadius:'50%',background:'var(--ok)'}}/>Active</span>;
-    if(status === 'past_due') return <span className="tag tag-warn"><span style={{width:6,height:6,borderRadius:'50%',background:'var(--warn)'}}/>Past due</span>;
-    if(status === 'cancelled') return <span className="tag tag-bad"><span style={{width:6,height:6,borderRadius:'50%',background:'var(--bad)'}}/>Cancelled</span>;
-    return <span className="tag">{status}</span>;
+  function ActiveStatusTag() {
+    return <span className="tag tag-ok"><span style={{width:6,height:6,borderRadius:'50%',background:'var(--ok)'}}/>Active</span>;
   }
 
   return (
@@ -508,27 +493,8 @@ function AdminSubscriptions({ go }) {
           <div className="small muted">Admin</div>
           <h1 style={{marginTop:6}}>Subscriptions</h1>
           <p className="muted" style={{marginTop:6, fontSize:14}}>
-            {SUBS.length} students · {counts.active} Pro active · {counts.pastDue} past due
+            Phase 1 display only · {SUBS.length} students · all Pro · all Active
           </p>
-        </div>
-        <div className="row" style={{gap:10}}>
-          <div style={{position:'relative'}}>
-            <button className="btn btn-ghost" onClick={() => setFilterOpen(f => !f)}>
-              <IFilter /> Filter{activeFilters > 0 && <span style={{marginLeft:4, background:'var(--accent)', color:'#fff', borderRadius:'50%', width:17, height:17, fontSize:11, display:'inline-grid', placeItems:'center'}}>{activeFilters}</span>}
-            </button>
-            {filterOpen && (
-              <div className="card" style={{position:'absolute', right:0, top:'calc(100% + 6px)', zIndex:30, padding:18, minWidth:260, boxShadow:'var(--shadow-lg)'}}>
-                <div className="row between" style={{marginBottom:14}}>
-                  <span style={{fontSize:13, fontWeight:500}}>Filters</span>
-                  {activeFilters > 0 && <button className="btn btn-quiet" style={{padding:'3px 8px', fontSize:12}} onClick={() => { setPlanFilter('All'); setStatusFilter('All'); }}>Clear all</button>}
-                </div>
-                <div className="col" style={{gap:12}}>
-                  <FilterSel label="Plan" value={planFilter} onChange={setPlanFilter} options={['All','Pro','Free']} />
-                  <FilterSel label="Status" value={statusFilter} onChange={setStatusFilter} options={['All','active','past_due','cancelled']} />
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -549,13 +515,12 @@ function AdminSubscriptions({ go }) {
               <th>ID</th>
               <th>Plan</th>
               <th>Status</th>
-              <th>Renewal</th>
               <th style={{paddingRight:22}}>Member since</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(s => (
-              <tr key={s.id} onClick={() => setDetailStudent(s)} style={{cursor:'pointer'}}>
+              <tr key={s.id}>
                 <td style={{paddingLeft:22}}>
                   <div style={{display:'flex', alignItems:'center', gap:10}}>
                     <div className="avatar" style={{width:28, height:28, fontSize:11, background:'var(--accent-soft)', color:'var(--accent-ink)', border:'1px solid var(--accent-border)', flexShrink:0}}>
@@ -568,9 +533,8 @@ function AdminSubscriptions({ go }) {
                   </div>
                 </td>
                 <td className="mono" style={{color:'var(--ink-3)', fontSize:12.5}}>{s.id}</td>
-                <td>{s.plan === 'Pro' ? <span className="tag tag-strong">Pro</span> : <span className="tag">Free</span>}</td>
-                <td><SubStatusTag status={s.status} /></td>
-                <td className="muted" style={{fontSize:13}}>{s.renewal}</td>
+                <td><span className="tag tag-strong">Pro</span></td>
+                <td><ActiveStatusTag /></td>
                 <td className="muted" style={{fontSize:13, paddingRight:22}}>{s.joined}</td>
               </tr>
             ))}
@@ -586,103 +550,6 @@ function AdminSubscriptions({ go }) {
           </div>
         </div>
       </div>
-
-      {detailStudent && (
-        <AdminModalPortal>
-          <div onClick={() => setDetailStudent(null)} style={{position:'fixed', inset:0, background:'rgba(20,20,20,0.35)', display:'flex', alignItems:'flex-start', justifyContent:'flex-end', zIndex:60, padding:16}}>
-            <div onClick={e => e.stopPropagation()} className="card" style={{width:400, maxHeight:'calc(100vh - 32px)', overflow:'auto', padding:0, boxShadow:'var(--shadow-lg)'}}>
-              <div className="row between" style={{padding:'18px 22px', borderBottom:'1px solid var(--border)'}}>
-                <div>
-                  <div className="small muted">{detailStudent.id}</div>
-                  <h3 style={{marginTop:2}}>{detailStudent.name}</h3>
-                </div>
-                <button className="icon-btn" onClick={() => setDetailStudent(null)}><IX /></button>
-              </div>
-              <div style={{padding:'20px 22px'}}>
-                {[
-                  {label:'Email', value:detailStudent.email},
-                  {label:'Plan', value:detailStudent.plan},
-                  {label:'Status', value:detailStudent.status.replace('_',' ')},
-                  {label:'Renewal', value:detailStudent.renewal},
-                  {label:'Member since', value:detailStudent.joined},
-                ].map((r,i) => (
-                  <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom: i<4 ? '1px solid var(--border-2)' : 'none', fontSize:14}}>
-                    <span style={{color:'var(--ink-3)'}}>{r.label}</span>
-                    <span style={{color:'var(--ink)', fontWeight:450}}>{r.value}</span>
-                  </div>
-                ))}
-                <div style={{marginTop:20}}>
-                  <button className="btn btn-primary" style={{justifyContent:'center', width:'100%'}} onClick={() => { setDetailStudent(null); setActionStudent(detailStudent); }}>
-                    Manage subscription
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </AdminModalPortal>
-      )}
-
-      {actionStudent && (
-        <AdminModalPortal>
-          <div onClick={() => setActionStudent(null)} style={{position:'fixed', inset:0, background:'rgba(20,20,20,0.35)', display:'grid', placeItems:'center', zIndex:60, padding:24}}>
-            <div onClick={e => e.stopPropagation()} className="card" style={{width:'min(480px,100%)', padding:0, boxShadow:'var(--shadow-lg)'}}>
-              <div className="row between" style={{padding:'18px 22px', borderBottom:'1px solid var(--border)'}}>
-                <div>
-                  <div className="small muted">{actionStudent.id}</div>
-                  <h3 style={{marginTop:2}}>Manage subscription</h3>
-                </div>
-                <button className="icon-btn" onClick={() => setActionStudent(null)}><IX /></button>
-              </div>
-              <div style={{padding:'20px 22px'}}>
-                <div style={{marginBottom:16, padding:'14px 16px', borderRadius:10, background:'var(--surface-2)', border:'1px solid var(--border)', fontSize:14}}>
-                  <div className="row between" style={{marginBottom:4}}>
-                    <span style={{color:'var(--ink-3)'}}>Student</span>
-                    <span style={{fontWeight:500}}>{actionStudent.name}</span>
-                  </div>
-                  <div className="row between" style={{marginBottom:4}}>
-                    <span style={{color:'var(--ink-3)'}}>Current plan</span>
-                    <span>{actionStudent.plan}</span>
-                  </div>
-                  <div className="row between">
-                    <span style={{color:'var(--ink-3)'}}>Status</span>
-                    <span>{actionStudent.status.replace('_',' ')}</span>
-                  </div>
-                </div>
-                <div className="col" style={{gap:10}}>
-                  <label className="col" style={{gap:6}}>
-                    <span className="small muted">Update plan</span>
-                    <select defaultValue={actionStudent.plan}>
-                      <option>Free</option>
-                      <option>Pro</option>
-                    </select>
-                  </label>
-                  <label className="col" style={{gap:6}}>
-                    <span className="small muted">Update status</span>
-                    <select defaultValue={actionStudent.status}>
-                      <option value="active">Active</option>
-                      <option value="past_due">Past due</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </label>
-                  <label className="col" style={{gap:6}}>
-                    <span className="small muted">Admin note (internal)</span>
-                    <textarea rows="2" placeholder="Optional note…" style={{resize:'vertical'}} />
-                  </label>
-                </div>
-              </div>
-              <div className="row between" style={{padding:'14px 22px', borderTop:'1px solid var(--border)', background:'var(--surface-2)'}}>
-                <button className="btn btn-quiet" onClick={() => setActionStudent(null)}>Cancel</button>
-                <div className="row" style={{gap:8}}>
-                  <button className="btn btn-ghost" style={{color:'var(--bad)', borderColor:'color-mix(in srgb, var(--bad) 25%, white)'}} onClick={() => setActionStudent(null)}>
-                    Cancel subscription
-                  </button>
-                  <button className="btn btn-primary" onClick={() => setActionStudent(null)}><ICheck /> Save changes</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </AdminModalPortal>
-      )}
     </div>
   );
 }
